@@ -1,0 +1,4 @@
+<form>
+    <label name="default_timeout"/>
+    <field name="default_timeout"/>
+</form>

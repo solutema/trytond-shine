@@ -1,0 +1,6 @@
+<tree>
+    <field name="name"/>
+    <field name="sheet"/>
+    <field name="type"/>
+    <button name="open"/>
+</tree>

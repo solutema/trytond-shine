@@ -1,0 +1,9 @@
+<tree editable="bottom" sequence="sequence">
+    <field name="sheet"/>
+    <field name="name"/>
+    <field name="alias"/>
+    <field name="expression"/>
+    <field name="type"/>
+    <field name="store"/>
+    <field name="current_value"/>
+</tree>

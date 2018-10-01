@@ -1,0 +1,9 @@
+<tree editable="bottom" sequence="sequence">
+    <field name="dashboard"/>
+    <field name="alias"/>
+    <field name="view"/>
+    <field name="left"/>
+    <field name="right"/>
+    <field name="top"/>
+    <field name="bottom"/>
+</tree>

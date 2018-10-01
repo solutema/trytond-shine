@@ -1,0 +1,6 @@
+<data>
+    <xpath expr="/tree" position="replace_attributes">
+        <tree editable="bottom"/>
+    </xpath>
+</data>
+

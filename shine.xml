@@ -1,0 +1,205 @@
+<tryton>
+    <data>
+	    <menuitem sequence="100" name="Shine" id="menu_shine"/>
+
+        <record model="ir.ui.view" id="sheet_view_tree">
+            <field name="model">shine.sheet</field>
+            <field name="type">tree</field>
+            <field name="name">sheet_list</field>
+        </record>
+        <record model="ir.ui.view" id="sheet_view_form">
+            <field name="model">shine.sheet</field>
+            <field name="type">form</field>
+            <field name="name">sheet_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_sheet_form">
+            <field name="name">Sheets</field>
+            <field name="res_model">shine.sheet</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_sheet_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="sheet_view_tree"/>
+            <field name="act_window" ref="act_sheet_form"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_sheet_form_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="sheet_view_form"/>
+            <field name="act_window" ref="act_sheet_form"/>
+        </record>
+        <record model="ir.model.button" id="sheet_activate_button">
+            <field name="name">activate</field>
+            <field name="string">Activate</field>
+            <field name="model" search="[('model', '=', 'shine.sheet')]"/>
+        </record>
+        <record model="ir.model.button" id="sheet_draft_button">
+            <field name="name">draft</field>
+            <field name="string">Draft</field>
+            <field name="model" search="[('model', '=', 'shine.sheet')]"/>
+        </record>
+        <record model="ir.model.button" id="sheet_open_button">
+            <field name="name">open</field>
+            <field name="string">Open</field>
+            <field name="model" search="[('model', '=', 'shine.sheet')]"/>
+        </record>
+        <record model="ir.model.button" id="sheet_compute_button">
+            <field name="name">compute</field>
+            <field name="string">Compute</field>
+            <field name="model" search="[('model', '=', 'shine.sheet')]"/>
+        </record>
+        <record model="ir.model.button" id="sheet_update_formulas_button">
+            <field name="name">update_formulas</field>
+            <field name="string">Update Formulas</field>
+            <field name="model" search="[('model', '=', 'shine.sheet')]"/>
+        </record>
+        <record model="ir.action.act_window" id="act_open_sheet_form">
+            <field name="name">Sheet Data</field>
+            <field name="res_model">shine.data</field>
+            <field name="context" eval="{'shine_sheet': Eval('active_id'), 'shine_table': Eval('current_table')}" pyson="1"/>
+        </record>
+
+        <record model="ir.model.access" id="access_data">
+            <field name="model" search="[('model', '=', 'shine.data')]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_delete" eval="True"/>
+        </record>
+
+        <menuitem parent="menu_shine" sequence="10"
+            action="act_sheet_form" id="menu_sheet"/>
+
+        <record model="ir.ui.view" id="dataset_view_tree">
+            <field name="model">shine.dataset</field>
+            <field name="type">tree</field>
+            <field name="name">dataset_list</field>
+        </record>
+        <record model="ir.ui.view" id="dataset_view_form">
+            <field name="model">shine.dataset</field>
+            <field name="type">form</field>
+            <field name="name">dataset_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_dataset_form">
+            <field name="name">Data Sets</field>
+            <field name="res_model">shine.dataset</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_dataset_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="dataset_view_tree"/>
+            <field name="act_window" ref="act_dataset_form"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_dataset_form_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="dataset_view_form"/>
+            <field name="act_window" ref="act_dataset_form"/>
+        </record>
+        <menuitem parent="menu_shine" sequence="10"
+            action="act_dataset_form" id="menu_dataset"/>
+
+        <record model="ir.ui.view" id="formula_view_tree">
+            <field name="model">shine.formula</field>
+            <field name="type">tree</field>
+            <field name="name">formula_list</field>
+        </record>
+        <record model="ir.ui.view" id="formula_view_form">
+            <field name="model">shine.formula</field>
+            <field name="type">form</field>
+            <field name="name">formula_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_formula_form">
+            <field name="name">Formulas</field>
+            <field name="res_model">shine.formula</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_formula_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="formula_view_tree"/>
+            <field name="act_window" ref="act_formula_form"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_formula_form_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="formula_view_form"/>
+            <field name="act_window" ref="act_formula_form"/>
+        </record>
+        <menuitem parent="menu_sheet" sequence="20"
+            action="act_formula_form" id="menu_formula"/>
+
+        <record model="ir.ui.view" id="function_view_tree">
+            <field name="model">shine.function</field>
+            <field name="type">tree</field>
+            <field name="name">function_list</field>
+        </record>
+        <record model="ir.ui.view" id="function_view_form">
+            <field name="model">shine.function</field>
+            <field name="type">form</field>
+            <field name="name">function_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_function_form">
+            <field name="name">Functions</field>
+            <field name="res_model">shine.function</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_function_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="function_view_tree"/>
+            <field name="act_window" ref="act_function_form"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_function_form_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="function_view_form"/>
+            <field name="act_window" ref="act_function_form"/>
+        </record>
+        <menuitem parent="menu_shine" sequence="30"
+            action="act_function_form" id="menu_function"/>
+
+        <record model="ir.ui.view" id="view_view_tree">
+            <field name="model">shine.view</field>
+            <field name="type">tree</field>
+            <field name="name">view_list</field>
+        </record>
+        <record model="ir.ui.view" id="view_view_form">
+            <field name="model">shine.view</field>
+            <field name="type">form</field>
+            <field name="name">view_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_view_form">
+            <field name="name">Views</field>
+            <field name="res_model">shine.view</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_view_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="view_view_tree"/>
+            <field name="act_window" ref="act_view_form"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_view_form_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="view_view_form"/>
+            <field name="act_window" ref="act_view_form"/>
+        </record>
+        <record model="ir.model.button" id="view_table_update_formulas_button">
+            <field name="name">table_update_formulas</field>
+            <field name="string">Update Formulas</field>
+            <field name="model" search="[('model', '=', 'shine.view')]"/>
+        </record>
+        <record model="ir.model.button" id="view_open_button">
+            <field name="name">open</field>
+            <field name="string">Open</field>
+            <field name="model" search="[('model', '=', 'shine.view')]"/>
+        </record>
+        <record model="ir.action.act_window" id="act_open_view_form">
+            <field name="name">Open View</field>
+            <field name="res_model">shine.data</field>
+            <field name="context" eval="{'shine_view': Eval('active_id'), 'shine_table': Eval('current_table')}" pyson="1"/>
+        </record>
+        <menuitem parent="menu_shine" sequence="40"
+            action="act_view_form" id="menu_view"/>
+
+        <record model="ir.ui.view" id="view_view_table_formula_tree">
+            <field name="model">shine.view.table.formula</field>
+            <field name="type">tree</field>
+            <field name="name">view_table_formula_list</field>
+        </record>
+        <record model="ir.ui.view" id="view_view_table_formula_form">
+            <field name="model">shine.view.table.formula</field>
+            <field name="type">form</field>
+            <field name="name">view_form</field>
+        </record>
+    </data>
+</tryton>

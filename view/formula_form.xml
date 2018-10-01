@@ -1,0 +1,19 @@
+<form>
+    <label name="sheet"/>
+    <field name="sheet"/>
+    <label name="sequence"/>
+    <field name="sequence"/>
+    <newline/>
+    <label name="name"/>
+    <field name="name"/>
+    <label name="alias"/>
+    <field name="alias"/>
+    <label name="expression"/>
+    <field name="expression" colspan="3"/>
+    <label name="type"/>
+    <field name="type"/>
+    <label name="store"/>
+    <field name="store"/>
+    <label name="current_value"/>
+    <field name="current_value" colspan="3"/>
+</form>

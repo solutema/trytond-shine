@@ -1,0 +1,9 @@
+<form>
+    <label name="view"/>
+    <field name="view"/>
+    <label name="sequence"/>
+    <field name="sequence"/>
+    <newline/>
+    <label name="formula"/>
+    <field name="formula"/>
+</form>

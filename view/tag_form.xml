@@ -1,0 +1,6 @@
+<form>
+    <label name="name"/>
+    <field name="name"/>
+    <label name="parent"/>
+    <field name="parent"/>
+</form>

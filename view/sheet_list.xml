@@ -1,0 +1,10 @@
+<tree>
+    <field name="name"/>
+    <field name="revision"/>
+    <field name="alias"/>
+    <field name="type"/>
+    <field name="dataset"/>
+    <field name="tags_char"/>
+    <field name="state"/>
+    <button name="open"/>
+</tree>

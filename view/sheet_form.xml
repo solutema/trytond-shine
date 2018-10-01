@@ -1,0 +1,45 @@
+<form>
+    <label name="name"/>
+    <group col="3">
+    	<field name="name"/>
+        <label string="/"/>
+        <field name="revision"/>
+    </group>
+    <label name="alias"/>
+    <field name="alias"/>
+    <label name="type"/>
+    <field name="type"/>
+    <label name="dataset"/>
+    <group col="2">
+        <field name="dataset"/>
+        <button name="update_formulas"/>
+    </group>
+    <newline/>
+    <label name="tags_char"/>
+    <field name="tags_char" colspan="3"/>
+    <notebook>
+        <page name="formulas">
+            <field name="formulas" colspan="4"/>
+            <label name="state"/>
+            <field name="state"/>
+            <group colspan="2" col="4">
+                <button name="draft"/>
+                <button name="activate"/>
+                <button name="compute"/>
+                <button name="open"/>
+            </group>
+        </page>
+        <page name="tags">
+            <field name="tags" colspan="4"/>
+        </page>
+        <page name="views">
+            <field name="views" colspan="4"/>
+        </page>
+        <page string="Settings" id="settings">
+            <label name="timeout"/>
+            <field name="timeout"/>
+            <separator name="python_code" colspan="4"/>
+            <field name="python_code" colspan="4"/>
+        </page>
+    </notebook>
+</form>

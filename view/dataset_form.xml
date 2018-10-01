@@ -1,0 +1,14 @@
+<form col="6">
+    <label name="name"/>
+    <field name="name"/>
+    <label name="type"/>
+    <field name="type"/>
+    <label name="source"/>
+    <field name="source"/>
+    <label name="model"/>
+    <field name="model" colspan="5"/>
+    <label name="sheet"/>
+    <field name="sheet" colspan="5"/>
+    <separator name="query" colspan="6"/>
+    <field name="query" colspan="6"/>
+</form>

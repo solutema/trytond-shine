@@ -1,0 +1,64 @@
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="dashboard_view_tree">
+            <field name="model">shine.dashboard</field>
+            <field name="type">tree</field>
+            <field name="name">dashboard_list</field>
+        </record>
+        <record model="ir.ui.view" id="dashboard_view_form">
+            <field name="model">shine.dashboard</field>
+            <field name="type">form</field>
+            <field name="name">dashboard_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_dashboard_form">
+            <field name="name">Dashboards</field>
+            <field name="res_model">shine.dashboard</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_dashboard_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="dashboard_view_tree"/>
+            <field name="act_window" ref="act_dashboard_form"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_dashboard_form_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="dashboard_view_form"/>
+            <field name="act_window" ref="act_dashboard_form"/>
+        </record>
+        <menuitem parent="menu_shine" sequence="50"
+            action="act_dashboard_form" id="menu_dashboard"/>
+
+        <record model="ir.ui.view" id="dashboard_element_view_tree">
+            <field name="model">shine.dashboard.element</field>
+            <field name="type">tree</field>
+            <field name="name">dashboard_element_list</field>
+        </record>
+        <record model="ir.ui.view" id="dashboard_element_view_form">
+            <field name="model">shine.dashboard.element</field>
+            <field name="type">form</field>
+            <field name="name">dashboard_element_form</field>
+        </record>
+
+        <record model="ir.ui.view" id="dashboard_mockup_view_tree">
+            <field name="model">shine.dashboard.mockup</field>
+            <field name="type">tree</field>
+            <field name="name">dashboard_mockup_list</field>
+        </record>
+        <record model="ir.ui.view" id="dashboard_mockup_view_form">
+            <field name="model">shine.dashboard.mockup</field>
+            <field name="type">form</field>
+            <field name="name">dashboard_mockup_form</field>
+        </record>
+    </data>
+    <data depends="dashboard">
+        <record model="ir.ui.view" id="action_view_form">
+            <field name="model">dashboard.action</field>
+            <field name="inherit" ref="dashboard.action_view_form"/>
+            <field name="name">action_form</field>
+        </record>
+        <record model="ir.ui.view" id="action_view_tree_sequence">
+            <field name="model">dashboard.action</field>
+            <field name="inherit" ref="dashboard.action_view_tree_sequence"/>
+            <field name="name">action_tree_sequence</field>
+        </record>
+    </data>
+</tryton>

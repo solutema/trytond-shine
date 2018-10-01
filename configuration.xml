@@ -1,0 +1,21 @@
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="configuration_view_form">
+            <field name="model">shine.configuration</field>
+            <field name="type">form</field>
+            <field name="name">configuration_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_configuration_form">
+            <field name="name">Configuration</field>
+            <field name="res_model">shine.configuration</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_configuration_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="configuration_view_form"/>
+            <field name="act_window" ref="act_configuration_form"/>
+        </record>
+	<menuitem parent="menu_shine" name="Configuration" sequence="1" id="menu_configuration"/>
+        <menuitem parent="menu_configuration" sequence="1"
+            action="act_configuration_form" id="menu_configuration_form"/>
+    </data>
+</tryton>

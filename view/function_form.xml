@@ -1,0 +1,11 @@
+<form>
+    <label name="name"/>
+    <field name="name"/>
+    <label name="parameters"/>
+    <field name="parameters"/>
+    <label name="help"/>
+    <field name="help" colspan="3"/>
+    <label name="code"/>
+    <field name="code" colspan="3"/>
+</form>
+

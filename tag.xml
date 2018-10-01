@@ -1,0 +1,103 @@
+<tryton>
+    <data>
+        <record model="ir.action.act_window" id="act_sheet_by_tag">
+            <field name="name">Sheets by Tag</field>
+            <field name="res_model">shine.sheet</field>
+	    <field name="context" eval="{'tags': [Eval('active_id')]}"
+                pyson="1"/>
+            <field name="domain"
+                eval="[('tags','child_of', [Eval('active_id')], 'parent')]"
+                pyson="1"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_sheet_by_tag_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="sheet_view_tree"/>
+            <field name="act_window" ref="act_sheet_by_tag"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_sheet_by_tag_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="sheet_view_form"/>
+            <field name="act_window" ref="act_sheet_by_tag"/>
+        </record>
+        <record model="ir.action.keyword" id="act_sheet_by_tag_keyword1">
+            <field name="keyword">tree_open</field>
+            <field name="model">shine.tag,-1</field>
+            <field name="action" ref="act_sheet_by_tag"/>
+        </record>
+
+        <record model="ir.ui.view" id="tag_view_list">
+            <field name="model">shine.tag</field>
+            <field name="type">tree</field>
+            <field name="priority" eval="10"/>
+            <field name="name">tag_list</field>
+        </record>
+        <record model="ir.ui.view" id="tag_view_tree">
+            <field name="model">shine.tag</field>
+            <field name="type">tree</field>
+            <field name="priority" eval="20"/>
+            <field name="field_childs">children</field>
+            <field name="name">tag_tree</field>
+        </record>
+        <record model="ir.ui.view" id="tag_view_form">
+            <field name="model">shine.tag</field>
+            <field name="type">form</field>
+            <field name="name">tag_form</field>
+        </record>
+
+        <record model="ir.action.act_window" id="act_tag_tree">
+            <field name="name">Tags</field>
+            <field name="res_model">shine.tag</field>
+            <field name="domain" eval="[('parent', '=', None)]" pyson="1"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_tag_tree_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="tag_view_tree"/>
+            <field name="act_window" ref="act_tag_tree"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_tag_tree_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="tag_view_form"/>
+            <field name="act_window" ref="act_tag_tree"/>
+        </record>
+
+        <menuitem parent="menu_shine" sequence="2"
+            action="act_tag_tree" id="menu_tag_tree"/>
+
+        <record model="ir.action.act_window" id="act_tag_list">
+            <field name="name">Tags</field>
+            <field name="res_model">shine.tag</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_tag_list_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="tag_view_list"/>
+            <field name="act_window" ref="act_tag_list"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_tag_list_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="tag_view_form"/>
+            <field name="act_window" ref="act_tag_list"/>
+        </record>
+        <menuitem parent="menu_tag_tree"
+            sequence="20" id="menu_tag_list"
+            action="act_tag_list"/>
+<!--
+
+        <record model="ir.model.access" id="access_shine_tag">
+            <field name="model" search="[('model', '=', 'shine.tag')]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+     TODO
+        <record model="ir.model.access" id="access_shine_tag_admin">
+            <field name="model" search="[('model', '=', 'shine.tag')]"/>
+            <field name="group" ref="group_shine_admin"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_delete" eval="True"/>
+        </record>
+-->
+    </data>
+</tryton>

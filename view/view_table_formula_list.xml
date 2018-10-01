@@ -1,0 +1,4 @@
+<tree editable="bottom" sequence="sequence">
+    <field name="view"/>
+    <field name="formula"/>
+</tree>

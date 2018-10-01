@@ -1,0 +1,5 @@
+<tree keyword_open="1">
+    <field name="name"/>
+    <field name="parent" tree_invisible="1"/>
+    <field name="children" tree_invisible="1"/>
+</tree>

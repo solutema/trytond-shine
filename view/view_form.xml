@@ -1,0 +1,32 @@
+<form>
+    <label name="name"/>
+    <field name="name"/>
+    <label name="sheet"/>
+    <field name="sheet"/>
+    <label name="type"/>
+    <field name="type"/>
+    <button name="open" colspan="2"/>
+    <newline/>
+    <field name="table_formulas" colspan="4"/>
+    <button name="table_update_formulas"/>
+    <newline/>
+    <label name="chart_type"/>
+    <field name="chart_type"/>
+    <label name="chart_interpolation"/>
+    <field name="chart_interpolation"/>
+    <label name="chart_legend"/>
+    <field name="chart_legend"/>
+    <newline/>
+    <label name="chart_group"/>
+    <field name="chart_group"/>
+    <label name="chart_value"/>
+    <field name="chart_value"/>
+    <newline/>
+    <label name="custom_type"/>
+    <field name="custom_type"/>
+    <label name="custom_parent"/>
+    <field name="custom_parent"/>
+    <separator name="custom_arch" colspan="4"/>
+    <field name="custom_arch" colspan="4"/>
+</form>
+
