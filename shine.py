@@ -212,6 +212,12 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                         ~Bool(Eval('dataset'))),
                     },
                 })
+        cls._error_messages.update({
+                'consecutive_icons': ('There cannot be two consecutive '
+                    'fields of Icon type in sheet "%s".'),
+                'last_icon': ('The last formula cannot be of type Icon in '
+                    'sheet "%s".'),
+                })
 
     @fields.depends('name', 'alias')
     def on_change_name(self):
@@ -236,6 +242,8 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
         Field = pool.get('shine.table.field')
 
         for sheet in sheets:
+            sheet.check_icons()
+
             sheet.revision += 1
             table = Table()
             table.name = sheet.data_table_name
@@ -256,6 +264,19 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
             table.save()
             sheet.current_table = table
         cls.save(sheets)
+
+    def check_icons(self):
+        was_icon = False
+        for formula in self.formulas:
+            if formula.type == 'icon':
+                if was_icon:
+                    self.raise_user_error('consecutive_icons',
+                        self.rec_name)
+                was_icon = True
+            else:
+                was_icon = False
+        if was_icon:
+            self.raise_user_error('last_icon', self.rec_name)
 
     @classmethod
     @ModelView.button
