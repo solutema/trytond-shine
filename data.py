@@ -18,7 +18,7 @@ class Adapter:
 
     def __iter__(self):
         fields = self.get_fields()
-        return fields
+        return fields.__iter__()
 
     def __getitem__(self, name):
         fields = self.get_fields()
@@ -28,6 +28,8 @@ class Adapter:
         # TODO: Cache
         Data = Pool().get('shine.data')
         table = Data.get_table()
+        if not table:
+            return Data._previous_fields
         res = {}
         for field in table.fields:
             if field.type == 'char':
@@ -69,10 +71,13 @@ class Data(ModelSQL, ModelView):
     @classmethod
     def __post_setup__(cls):
         super(Data, cls).__post_setup__()
+        cls._previous_fields = cls._fields
         cls._fields = Adapter()
 
     @classmethod
     def __table__(cls):
+        # TODO: Check if we can drop create(), read(), write(), delete() &
+        # search()
         return cls.get_sql_table()
 
     @classmethod
@@ -204,8 +209,10 @@ class Data(ModelSQL, ModelView):
     @classmethod
     def search(cls, domain, offset=0, limit=None, order=None, count=False,
             query=False):
+        if not cls.get_table():
+            return super(Data, cls).search(domain, offset, limit, order, count,
+                query)
         table = cls.get_sql_table()
-
         cursor = Transaction().connection.cursor()
         # Get domain clauses
         tables, expression = cls.search_domain(domain,
@@ -295,7 +302,7 @@ class Data(ModelSQL, ModelView):
         if sheet_id:
             return Sheet(sheet_id)
         view = cls.get_view()
-        if view:
+        if view.id:
             return view.sheet
 
     @classmethod
@@ -313,13 +320,17 @@ class Data(ModelSQL, ModelView):
                 table = sheet.current_table
         if not table:
             view = cls.get_view()
-            if view:
+            if view.id:
                 table = view.current_table
-        return Table(table)
+        if table:
+            return Table(table)
 
     @classmethod
     def get_sql_table(cls):
-        return sql.Table(cls.get_table().name)
+        table = cls.get_table()
+        if table:
+            return sql.Table(table.name)
+        return super(Data, cls).__table__()
 
     @classmethod
     def copy(cls, records, default=None):
