@@ -7,7 +7,7 @@ from datetime import datetime, date, time
 from dateutil import relativedelta
 from trytond import backend
 from trytond.model import (Workflow, ModelSQL, ModelView, fields,
-    sequence_ordered)
+    sequence_ordered, Unique)
 from trytond.pyson import PYSONEncoder, PYSONDecoder, PYSON, Eval, Bool
 from trytond.pool import Pool
 from trytond.transaction import Transaction
@@ -632,6 +632,11 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     @classmethod
     def __setup__(cls):
         super(Formula, cls).__setup__()
+        t = cls.__table__()
+        cls._sql_constraints += [
+            ('sheet_alias_uniq', Unique(t, t.sheet, sql.Column(t, 'alias')),
+                'There cannot be two formulas with the same alias in a sheet.')
+            ]
         cls._error_messages.update({
                 'invalid_alias': ('Invalid symbol "%(symbol)s" in formula '
                     '"%(name)s".'),
