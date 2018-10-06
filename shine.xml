@@ -65,7 +65,7 @@
             <field name="perm_delete" eval="True"/>
         </record>
 
-        <menuitem parent="menu_shine" sequence="10"
+        <menuitem parent="menu_shine" sequence="30"
             action="act_sheet_form" id="menu_sheet"/>
 
         <record model="ir.ui.view" id="dataset_view_tree">
@@ -92,7 +92,7 @@
             <field name="view" ref="dataset_view_form"/>
             <field name="act_window" ref="act_dataset_form"/>
         </record>
-        <menuitem parent="menu_shine" sequence="10"
+        <menuitem parent="menu_shine" sequence="40"
             action="act_dataset_form" id="menu_dataset"/>
 
         <record model="ir.ui.view" id="formula_view_tree">
@@ -119,8 +119,10 @@
             <field name="view" ref="formula_view_form"/>
             <field name="act_window" ref="act_formula_form"/>
         </record>
-        <menuitem parent="menu_sheet" sequence="20"
+        <menuitem parent="menu_sheet" sequence="10"
             action="act_formula_form" id="menu_formula"/>
+
+        <menuitem parent="menu_shine" sequence="10" name="Help" id="menu_help"/>
 
         <record model="ir.ui.view" id="function_view_tree">
             <field name="model">shine.function</field>
@@ -146,8 +148,35 @@
             <field name="view" ref="function_view_form"/>
             <field name="act_window" ref="act_function_form"/>
         </record>
-        <menuitem parent="menu_shine" sequence="30"
+        <menuitem parent="menu_help" sequence="10"
             action="act_function_form" id="menu_function"/>
+
+        <record model="ir.ui.view" id="icon_view_tree">
+            <field name="model">ir.ui.icon</field>
+            <field name="type">tree</field>
+            <field name="name">icon_list</field>
+        </record>
+        <record model="ir.ui.view" id="icon_view_form">
+            <field name="model">ir.ui.icon</field>
+            <field name="type">form</field>
+            <field name="name">icon_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_icon_form">
+            <field name="name">Icons</field>
+            <field name="res_model">ir.ui.icon</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_icon_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="icon_view_tree"/>
+            <field name="act_window" ref="act_icon_form"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_icon_form_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="icon_view_form"/>
+            <field name="act_window" ref="act_icon_form"/>
+        </record>
+        <menuitem parent="menu_help" sequence="20"
+            action="act_icon_form" id="menu_icon"/>
 
         <record model="ir.ui.view" id="view_view_tree">
             <field name="model">shine.view</field>
@@ -200,6 +229,68 @@
             <field name="model">shine.view.table.formula</field>
             <field name="type">form</field>
             <field name="name">view_form</field>
+        </record>
+
+        <record model="res.user" id="user_remove_old_tables">
+            <field name="login">user_remove_old_shine_tables</field>
+            <field name="name">Cron Remove Old Shine Tables</field>
+            <field name="signature"></field>
+            <field name="active" eval="False"/>
+        </record>
+        <record model="res.user-res.group" id="user_clean_execution_group_babi_admin">
+            <field name="user" ref="user_remove_old_tables"/>
+            <!-- TODO: Which group? -->
+            <field name="group" ref="res.group_admin"/>
+        </record>
+
+        <record model="ir.cron" id="cron_remove_old_tables">
+            <field name="name">Remove Old Shine Tables</field>
+            <field name="request_user" ref="res.user_admin"/>
+            <field name="user" ref="user_remove_old_tables"/>
+            <field name="active" eval="True"/>
+            <field name="interval_number" eval="1"/>
+            <field name="interval_type">days</field>
+            <field name="number_calls" eval="-1"/>
+            <field name="repeat_missed" eval="False"/>
+            <field name="model">shine.table</field>
+            <field name="function">remove_old_tables</field>
+        </record>
+
+        <record model="ir.ui.icon" id="red_icon">
+            <field name="name">red</field>
+            <field name="path">icons/red.svg</field>
+        </record>
+        <record model="ir.ui.icon" id="orange_icon">
+            <field name="name">orange</field>
+            <field name="path">icons/orange.svg</field>
+        </record>
+        <record model="ir.ui.icon" id="green_icon">
+            <field name="name">green</field>
+            <field name="path">icons/green.svg</field>
+        </record>
+        <record model="ir.ui.icon" id="increasing_icon">
+            <field name="name">increasing</field>
+            <field name="path">icons/increasing.svg</field>
+        </record>
+        <record model="ir.ui.icon" id="decreasing_icon">
+            <field name="name">decreasing</field>
+            <field name="path">icons/decreasing.svg</field>
+        </record>
+        <record model="ir.ui.icon" id="check_icon">
+            <field name="name">check</field>
+            <field name="path">icons/check.svg</field>
+        </record>
+        <record model="ir.ui.icon" id="star_icon">
+            <field name="name">star</field>
+            <field name="path">icons/star.svg</field>
+        </record>
+        <record model="ir.ui.icon" id="activity_icon">
+            <field name="name">activity</field>
+            <field name="path">icons/activity.svg</field>
+        </record>
+        <record model="ir.ui.icon" id="alert_icon">
+            <field name="name">alert</field>
+            <field name="path">icons/alert.svg</field>
         </record>
     </data>
 </tryton>

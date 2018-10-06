@@ -1,6 +1,10 @@
 import sql
+import formulas
+import unidecode
+from collections import OrderedDict
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date, time
+from dateutil import relativedelta
 from trytond import backend
 from trytond.model import (Workflow, ModelSQL, ModelView, fields,
     sequence_ordered)
@@ -9,28 +13,45 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.tools import cursor_dict
 from trytond.pyson import PYSONEncoder
-from .function import evaluate
+from .tag import TaggedMixin
 
-__all__ = ['Sheet', 'DataSet', 'Formula', 'View', 'ViewTableFormula', 'Data',
-    'Table', 'TableField', 'TableView']
+__all__ = ['Sheet', 'DataSet', 'Formula', 'View', 'ViewTableFormula', 'Table',
+    'TableField', 'TableView']
 
 FIELD_TYPES = [
-    ('char', 'Char', 'fields.Char', 'VARCHAR'),
-    ('integer', 'Integer', 'fields.Integer', 'INTEGER'),
-    ('float', 'Float', 'fields.Float', 'FLOAT'),
-    ('numeric', 'Numeric', 'fields.Numeric', 'NUMERIC'),
-    ('boolean', 'Boolean', 'fields.Boolean', 'BOOLEAN'),
-    ('many2one', 'Many To One', 'fields.Many2One', 'INTEGER'),
-    ('date', 'Date', 'fields.Date', 'DATE'),
-    ('datetime', 'Date Time', 'fields.DateTime', 'DATETIME'),
-    ('time', 'Time', 'fields.Time', 'TIME'),
-    ('timestamp', 'Timestamp', 'fields.Timestamp', 'TIMESTAMP'),
-    ('timedelta', 'Time Interval', 'fields.TimeDelta', 'INTERVAL'),
+    # (Internal selection name, Tryton field name, String, fields.Class, DB
+    # TYPE, python conversion method, SQL cast when reading from db)
+    ('char', 'char', 'Text (single-line)', 'fields.Char', 'VARCHAR', str, None),
+    ('multiline', 'text', 'Text (multi-line)', 'fields.Text', 'VARCHAR',
+        str, None),
+    ('integer', 'integer', 'Integer', 'fields.Integer', 'INTEGER', int, None),
+    ('float', 'float', 'Float', 'fields.Float', 'FLOAT', float, None),
+    ('numeric', 'numeric', 'Numeric', 'fields.Numeric', 'NUMERIC', Decimal,
+        None),
+    ('boolean', 'boolean', 'Boolean', 'fields.Boolean', 'BOOLEAN', bool, None),
+    ('many2one', 'many2one', 'Many To One', 'fields.Many2One', 'INTEGER', int,
+        None),
+    ('date', 'date', 'Date', 'fields.Date', 'DATE', date, None),
+    ('datetime', 'datetime', 'Date Time', 'fields.DateTime', 'DATETIME',
+        datetime, None),
+    ('time', 'time', 'Time', 'fields.Time', 'TIME', time, None),
+    ('timestamp', 'timestamp', 'Timestamp', 'fields.Timestamp', 'TIMESTAMP',
+        datetime, None),
+    ('timedelta', 'timedelta', 'Time Interval', 'fields.TimeDelta', 'INTERVAL',
+        relativedelta, None),
+    ('icon', 'char', 'Icon', 'fields.Char', 'VARCHAR', str, None),
+    ('image', 'binary', 'Image', 'fields.Binary', 'BLOB', bytes, bytearray),
+    ('binary', 'binary', 'File', 'fields.Binary', 'BLOB', bytes, bytearray),
+    ('reference', 'reference', 'Reference', 'fields.Reference', 'VARCHAR', str,
+        None),
     ]
 
-FIELD_TYPE_SELECTION = [(x[0], x[1]) for x in FIELD_TYPES]
-FIELD_TYPE_SQL = dict([(x[0], x[3]) for x in FIELD_TYPES])
-FIELD_TYPE_TRYTON = dict([(x[0], x[2]) for x in FIELD_TYPES])
+FIELD_TYPE_SELECTION = [(x[0], x[2]) for x in FIELD_TYPES]
+FIELD_TYPE_SQL = dict([(x[0], x[4]) for x in FIELD_TYPES])
+FIELD_TYPE_CLASS = dict([(x[0], x[3]) for x in FIELD_TYPES])
+FIELD_TYPE_PYTHON = dict([(x[0], x[5]) for x in FIELD_TYPES])
+FIELD_TYPE_TRYTON = dict([(x[0], x[1]) for x in FIELD_TYPES])
+FIELD_TYPE_CAST = dict([(x[0], x[6]) for x in FIELD_TYPES])
 
 VALID_FIRST_SYMBOLS = 'abcdefghijklmnopqrstuvwxyz'
 VALID_NEXT_SYMBOLS = '_0123456789'
@@ -39,6 +60,7 @@ VALID_SYMBOLS = VALID_FIRST_SYMBOLS + VALID_NEXT_SYMBOLS
 def convert_to_symbol(text):
     if not text:
         return 'x'
+    text = unidecode.unidecode(text)
     text = text.lower()
     first = text[0]
     symbol = first
@@ -46,6 +68,7 @@ def convert_to_symbol(text):
         symbol = '_'
         if symbol in VALID_SYMBOLS:
             symbol += first
+
     for x in text[1:]:
         if not x in VALID_SYMBOLS and symbol[-1] != '_':
             symbol += '_'
@@ -94,7 +117,7 @@ class TimeoutChecker:
             self._callback()
 
 
-class Sheet(Workflow, ModelSQL, ModelView):
+class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
     'Shine Sheet'
     __name__ = 'shine.sheet'
     name = fields.Char('Name', required=True)
@@ -121,7 +144,9 @@ class Sheet(Workflow, ModelSQL, ModelView):
             'invisible': ~Bool(Eval('dataset')),
             }, help='Maximum amount of time allowed for computing sheet data.')
     views = fields.One2Many('shine.view', 'sheet', 'Views')
-    tags = fields.Many2Many('shine.sheet.tag', 'sheet', 'tag', 'Tags')
+    tags = fields.Many2Many('shine.sheet.tag', 'sheet', 'tag', 'Tags', domain=[
+            ('view', '=', False),
+            ])
     tags_char = fields.Function(fields.Char('Tags'), 'on_change_with_tags_char',
         searcher='search_tags_char')
     current_table = fields.Many2One('shine.table', 'Table')
@@ -221,6 +246,7 @@ class Sheet(Workflow, ModelSQL, ModelView):
                         name=formula.alias,
                         string=formula.name,
                         type=formula.type,
+                        related_model=formula.related_model,
                         ))
             table.fields = fields
             table.create_table()
@@ -273,57 +299,57 @@ class Sheet(Workflow, ModelSQL, ModelView):
                 self.revision)).replace('.', '_')
 
     def compute_sheet(self):
-        Function = Pool().get('shine.function')
         cursor = Transaction().connection.cursor()
 
         table = sql.Table(self.data_table_name)
         cursor.execute(*table.delete())
 
-        eval_context = Function.eval_context()
-
-        #fields = [x.field_name for x in self.formulas]
+        #fields = dict([(x.alias, x) for x in self.formulas])
         direct_fields = [x.alias for x in self.formulas if not
             x.expression]
         formula_fields = [x.alias for x in self.formulas if x.expression]
-        fields = [sql.Column(table, x) for x in direct_fields + formula_fields]
+        sql_fields = [sql.Column(table, x) for x in direct_fields + formula_fields]
+
+        parser = formulas.Parser()
+        formula_fields = [(x, parser.ast(x.expression)[1].compile() if
+                x.expression.startswith('=') else '') for x in self.formulas if
+            x.expression]
 
         insert_values = []
         checker = TimeoutChecker(self.timeout, self.timeout_exception)
-        for records in self.dataset.get_data():
-            checker.check()
-            for record in records:
-                values = []
-                if direct_fields:
-                    values += [getattr(record, x) for x in direct_fields]
-                    #values += [record.get(x) for x in direct_fields]
-                if formula_fields:
-                    code = self.formulas_code(record)
-                    values += evaluate(code, eval_context,
-                        return_var='stored_formula_values')
-                insert_values.append(values)
-            cursor.execute(*table.insert(fields, insert_values))
-
-    def formulas_code(self, record=None):
-        if not record:
-            record = {}
-        code = ''
-        stored = []
-        for formula in self.formulas:
-            if not record and not formula.expression:
-                continue
-            if formula.expression:
-                expr = '%s = %s' % (formula.alias, formula.expression)
-            else:
-                value = record.get(formula.alias)
-                if isinstance(value, str):
-                    value = value.replace('"', 'x').replace('\n', '')
-                expr = '%s = "%s"' % (formula.alias, value)
-            code += expr + '\n'
-            if formula.expression and formula.store:
-                stored.append(formula.alias)
-        if stored:
-            code += 'stored_formula_values = (%s,)\n' % ', '.join(stored)
-        return code
+        if not formula_fields:
+            # If there are no formula_fields we can make the loop faster as
+            # we don't use OrderedDict and don't evaluate formulas
+            for records in self.dataset.get_data():
+                checker.check()
+                for record in records:
+                    insert_values.append([getattr(record, x) for x in
+                            direct_fields])
+        else:
+            for records in self.dataset.get_data():
+                checker.check()
+                for record in records:
+                    values = OrderedDict()
+                    if direct_fields:
+                        values.update(OrderedDict([(x, getattr(record, x)) for
+                                    x in direct_fields]))
+                    if formula_fields:
+                        for field, ast in formula_fields:
+                            if field.expression.startswith('='):
+                                inputs = []
+                                for input_ in ast.inputs.keys():
+                                    # TODO: Check if input_ exists and raise proper
+                                    # user error Indeed, we should check de
+                                    # formulas when we move to active state
+                                    inputs.append(values[input_.lower()])
+                                value = ast(inputs)[0]
+                            else:
+                                value = field.expression
+                            ftype = FIELD_TYPE_PYTHON[field.type]
+                            values[field] = ftype(value)
+                    insert_values.append(list(values.values()))
+        if insert_values:
+            cursor.execute(*table.insert(sql_fields, insert_values))
 
     def get_python_code(self, name):
         models = []
@@ -337,8 +363,10 @@ class Sheet(Workflow, ModelSQL, ModelView):
         code.append('    "%s"' % self.name)
         code.append('    __name__ = "%s"' % self.alias.replace('_', '.'))
         for formula in self.formulas:
+            if not formula.type:
+                continue
             code.append('    %s = fields.%s("%s")' % (formula.alias,
-                FIELD_TYPE_TRYTON[formula.type], formula.name))
+                FIELD_TYPE_CLASS[formula.type], formula.name))
         return '\n'.join(code)
 
     def timeout_exception(self):
@@ -468,12 +496,16 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     name = fields.Char('Name', required=True)
     alias = fields.Char('Alias', required=True)
     field_name = fields.Function(fields.Char('Field Name'), 'get_field_name')
-    expression = fields.Char('Expression')
+    expression = fields.Char('Formula')
     current_value = fields.Function(fields.Char('Value'),
         'on_change_with_current_value')
     type = fields.Selection([(None, '')] + FIELD_TYPE_SELECTION, 'Field Type',
         required=False)
     store = fields.Boolean('Store')
+    related_model = fields.Many2One('ir.model', 'Related Model', states={
+            'required': Eval('type') == 'many2one',
+            'invisible': Eval('type') != 'many2one',
+            })
 
     @staticmethod
     def default_store():
@@ -774,7 +806,7 @@ class Table(ModelSQL, ModelView):
     'Shine Table'
     __name__ = 'shine.table'
     name = fields.Char('Name', required=True)
-    fields = fields.One2Many('shine.table.field', 'model',
+    fields = fields.One2Many('shine.table.field', 'table',
         'Fields')
 
     def create_table(self):
@@ -801,223 +833,43 @@ class Table(ModelSQL, ModelView):
             table.add_column(field.name, sql_type)
         return table
 
+    @classmethod
+    def remove_old_tables(cls, days=0):
+        Sheet = Pool().get('shine.sheet')
+        current_table_ids = [x.current_table.id for x in Sheet.search([
+                    ('current_table', '!=', None)])]
+        tables = cls.search([
+                ('create_date', '<', datetime.now() -
+                    relativedelta.relativedelta(days=days)),
+                ('id', 'not in', current_table_ids),
+                ])
+        cls.delete(tables)
+
+    @classmethod
+    def delete(cls, tables):
+        transaction = Transaction()
+        TableHandler = backend.get('TableHandler')
+        for table in tables:
+            TableHandler.drop_table('', table.name, cascade=True)
+            transaction.database.sequence_delete(transaction.connection,
+                table.name + '_id_seq')
+
+        super(Table, cls).delete(tables)
+
 
 class TableField(ModelSQL, ModelView):
     'Shine Table Field'
     __name__ = 'shine.table.field'
-    model = fields.Many2One('shine.table', 'Table', required=True)
+    table = fields.Many2One('shine.table', 'Table', required=True,
+        ondelete='CASCADE')
     name = fields.Char('Name', required=True)
     string = fields.Char('String', required=True)
     type = fields.Selection([(None, '')] + FIELD_TYPE_SELECTION, 'Field Type',
         required=False)
+    related_model = fields.Many2One('ir.model', 'Related Model')
 
 
 class TableView(ModelSQL, ModelView):
     'Shine Table View'
     __name__ = 'shine.table.view'
     arch = fields.Text('Arch')
-
-
-class Data(ModelSQL, ModelView):
-    'Shine Data'
-    __name__ = 'shine.data'
-
-    @classmethod
-    def default_get(cls, fields_names, with_rec_name=True):
-        return {}
-
-    @classmethod
-    def fields_get(cls, fields_names=None):
-        res = super(Data, cls).fields_get(fields_names)
-        table = cls.get_table()
-        for field in table.fields:
-            res[field.name] = {
-                    'name': field.name,
-                    'string': field.string,
-                    'type': field.type,
-                    }
-        return res
-
-    @classmethod
-    def get_tree_view(cls, table, view):
-        fields = []
-        for field in table.fields:
-            if field.type in ('datetime', 'timestamp'):
-                fields.append('<field name="%s" widget="date"/>\n' %
-                    field.name)
-                fields.append('<field name="%s" widget="time"/>\n' %
-                    field.name)
-                continue
-
-            attributes = ''
-            if field.type in ('integer', 'float', 'numeric'):
-                attributes = 'sum="Total %s"' % field.string
-            fields.append('<field name="%s" %s/>\n' % (field.name,
-                    attributes))
-
-        xml = ('<?xml version="1.0"?>\n'
-            '<tree editable="bottom">\n'
-            '%s'
-            '</tree>') % '\n'.join(fields)
-        return fields, xml
-
-    @classmethod
-    def get_form_view(cls, table, view):
-        fields = []
-        for field in table.fields:
-            fields.append('<label name="%s"/>' % field.name)
-            if field.type in ('datetime', 'timestamp'):
-                fields.append('<group col="2">'
-                    '<field name="%s" widget="date"/>'
-                    '<field name="%s" widget="time"/>'
-                    '</group>' % (field.name, field.name))
-                continue
-            fields.append('<field name="%s"/>' % field.name)
-
-        xml = ('<?xml version="1.0"?>\n'
-            '<form>\n'
-            '%s'
-            '</form>') % '\n'.join(fields)
-        return fields, xml
-
-    @classmethod
-    def get_from_view(cls, table, view):
-        return
-
-    @classmethod
-    def fields_view_get(cls, view_id=None, view_type='form'):
-        #sheet = cls.get_sheet()
-        print('VIEW GET')
-        table = cls.get_table()
-        view = cls.get_view()
-
-        #if view:
-            #fields, xml = cls.get_from_view(table, view)
-
-        #if sheet and sheet.type == 'singleton':
-            #view_type = 'form'
-
-        print('VIEW', view)
-        if not view.id:
-            if view_type == 'tree':
-                fields, arch = cls.get_tree_view(table, view)
-            elif view_type == 'form':
-                fields, arch = cls.get_form_view(table, view)
-            children = None
-        else:
-            info = view.get_view_info()
-            view_type = info.get('type', view_type)
-            arch = info.get('arch')
-            children = info.get('children')
-            fields = info.get('fields')
-        res = {
-            'type': view_type,
-            'view_id': view_id,
-            'field_childs': children,
-            'arch': arch,
-            'fields': cls.fields_get(fields),
-            }
-        return res
-
-    @classmethod
-    def search(cls, domain, offset=0, limit=None, order=None, count=False,
-            query=False):
-        table = cls.get_sql_table()
-
-        cursor = Transaction().connection.cursor()
-        # Get domain clauses
-        tables, expression = cls.search_domain(domain)
-
-        select = table.select(table.id, where=expression, limit=limit,
-            offset=offset)
-        if query:
-            return select
-        cursor.execute(*select)
-        res=  [x[0] for x in cursor.fetchall()]
-        return res
-
-    @classmethod
-    def read(cls, ids, fields_names=None):
-        table = cls.get_sql_table()
-
-        cursor = Transaction().connection.cursor()
-        cursor.execute(*table.select())
-        fetchall = list(cursor_dict(cursor))
-        return fetchall
-
-    @classmethod
-    def create(cls, vlist):
-        table = cls.get_sql_table()
-
-        cursor = Transaction().connection.cursor()
-        ids = []
-        for record in vlist:
-            fields = []
-            values = []
-            for key, value in record.items():
-                fields.append(sql.Column(table, key))
-                values.append(value)
-
-            query = table.insert(fields, values=[values], returning=[table.id])
-            cursor.execute(*query)
-            ids.append(cursor.fetchone()[0])
-        return ids
-
-    @classmethod
-    def write(cls, *args):
-        table = cls.get_sql_table()
-        cursor = Transaction().connection.cursor()
-
-        actions = iter(args)
-        for records, values in zip(actions, actions):
-            fields = []
-            to_update = []
-            for key, value in values.items():
-                fields.append(sql.Column(table, key))
-                to_update.append(value)
-            query = table.update(fields, to_update)
-            cursor.execute(*query)
-
-    @classmethod
-    def delete(cls, records):
-        table = cls.get_sql_table()
-        cursor = Transaction().connection.cursor()
-        ids = [x.id for x in records if x.id > 0]
-        if ids:
-            query = table.delete(where=table.id.in_(ids))
-            cursor.execute(*query)
-
-    @classmethod
-    def get_sheet(cls):
-        Sheet = Pool().get('shine.sheet')
-        sheet_id = Transaction().context.get('shine_sheet') or 0
-        if sheet_id:
-            return Sheet(sheet_id)
-        view = cls.get_view()
-        if view:
-            return view.sheet
-
-    @classmethod
-    def get_view(cls):
-        View = Pool().get('shine.view')
-        return View(Transaction().context.get('shine_view') or 0)
-
-    @classmethod
-    def get_table(cls):
-        Table = Pool().get('shine.table')
-        table = Transaction().context.get('shine_table')
-        if not table:
-            sheet = cls.get_sheet()
-            if sheet:
-                table = sheet.current_table
-        if not table:
-            view = cls.get_view()
-            if view:
-                table = view.current_table
-        return Table(table)
-
-    @classmethod
-    def get_sql_table(cls):
-        return sql.Table(cls.get_table().name)
-
-    # TODO: copy()

@@ -60,7 +60,7 @@
             <field name="act_window" ref="act_tag_tree"/>
         </record>
 
-        <menuitem parent="menu_shine" sequence="2"
+        <menuitem parent="menu_shine" sequence="20"
             action="act_tag_tree" id="menu_tag_tree"/>
 
         <record model="ir.action.act_window" id="act_tag_list">

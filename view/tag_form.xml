@@ -3,4 +3,12 @@
     <field name="name"/>
     <label name="parent"/>
     <field name="parent"/>
+    <group id="options" col="6" colspan="4">
+        <label name="view"/>
+        <field name="view"/>
+        <label name="required"/>
+        <field name="required"/>
+        <label name="unique"/>
+        <field name="unique"/>
+    </group>
 </form>

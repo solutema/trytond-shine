@@ -1,3 +1,6 @@
 <tree>
     <field name="rec_name"/>
+    <field name="view"/>
+    <field name="required"/>
+    <field name="unique"/>
 </tree>

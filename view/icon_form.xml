@@ -1,0 +1,5 @@
+<form>
+    <image name="name" xexpand="0"/>
+    <label name="name"/>
+    <field name="name"/>
+</form>

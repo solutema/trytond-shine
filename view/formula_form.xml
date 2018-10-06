@@ -12,6 +12,8 @@
     <field name="expression" colspan="3"/>
     <label name="type"/>
     <field name="type"/>
+    <label name="related_model"/>
+    <field name="related_model"/>
     <label name="store"/>
     <field name="store"/>
     <label name="current_value"/>

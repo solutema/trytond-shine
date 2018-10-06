@@ -4,6 +4,7 @@
     <field name="alias"/>
     <field name="expression"/>
     <field name="type"/>
+    <field name="related_model"/>
     <field name="store"/>
     <field name="current_value"/>
 </tree>
