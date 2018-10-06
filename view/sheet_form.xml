@@ -1,8 +1,8 @@
 <form>
     <label name="name"/>
-    <group col="3">
+    <group id="name" col="3">
     	<field name="name"/>
-        <label string="/"/>
+        <label string="/" id="slash"/>
         <field name="revision"/>
     </group>
     <label name="alias"/>
@@ -10,7 +10,7 @@
     <label name="type"/>
     <field name="type"/>
     <label name="dataset"/>
-    <group col="2">
+    <group id="dataset" col="2">
         <field name="dataset"/>
         <button name="update_formulas"/>
     </group>
@@ -22,7 +22,7 @@
             <field name="formulas" colspan="4"/>
             <label name="state"/>
             <field name="state"/>
-            <group colspan="2" col="4">
+            <group id="buttons" colspan="2" col="4">
                 <button name="draft"/>
                 <button name="activate"/>
                 <button name="compute"/>
