@@ -276,7 +276,9 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
     @classmethod
     @ModelView.button
     def update_formulas(cls, sheets):
-        Formula = Pool().get('shine.formula')
+        pool = Pool()
+        Formula = pool.get('shine.formula')
+        Model = pool.get('ir.model')
         formulas = []
         for sheet in sheets:
             if not sheet.dataset:
@@ -290,6 +292,11 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                 formula.name = field['name']
                 formula.alias = field['alias']
                 formula.type = field['type']
+                if field.get('related_model'):
+                    related_model, = Model.search([
+                            ('model', '=', field['related_model']),
+                            ])
+                    formula.related_model = related_model
                 formula.store = True
                 formulas.append(formula)
         if formulas:
@@ -517,6 +524,7 @@ class DataSet(ModelSQL, ModelView):
                         'name': field.field_description,
                         'alias': field.name,
                         'type': field.ttype,
+                        'related_model': field.relation,
                         })
         return res
 
