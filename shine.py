@@ -118,6 +118,11 @@ class TimeoutChecker:
         if elapsed > self._timeout:
             self._callback()
 
+SHEET_STATES = [
+    ('draft', 'Draft'),
+    ('active', 'Active'),
+    ('canceled', 'Canceled'),
+    ]
 
 class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
     'Shine Sheet'
@@ -131,11 +136,8 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
             ], 'Type', states={
             'readonly': Eval('state') != 'draft',
             }, required=True)
-    state = fields.Selection([
-            ('draft', 'Draft'),
-            ('active', 'Active'),
-            ('canceled', 'Canceled'),
-            ], 'State', readonly=True, required=True)
+    state = fields.Selection(SHEET_STATES, 'State', readonly=True,
+        required=True)
     formulas = fields.One2Many('shine.formula', 'sheet', 'Formulas', states={
             'readonly': Eval('state') != 'draft',
             }, depends=['state'])
@@ -611,22 +613,37 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     'Shine Formula'
     __name__ = 'shine.formula'
     sheet = fields.Many2One('shine.sheet', 'Sheet', required=True,
-        ondelete='CASCADE')
-    name = fields.Char('Name', required=True)
-    alias = fields.Char('Alias', required=True)
+        ondelete='CASCADE', states={
+            'readonly': (Eval('sheet_state') != 'draft') & Eval('sheet'),
+            })
+    name = fields.Char('Name', required=True, states={
+            'readonly': Eval('sheet_state') != 'draft',
+            })
+    alias = fields.Char('Alias', required=True, states={
+            'readonly': Eval('sheet_state') != 'draft',
+            })
     field_name = fields.Function(fields.Char('Field Name'), 'get_field_name')
-    expression = fields.Char('Formula')
+    expression = fields.Char('Formula', states={
+            'readonly': Eval('sheet_state') != 'draft',
+            })
     expression_icon = fields.Function(fields.Char('Expression Icon'),
         'on_change_with_expression_icon')
     current_value = fields.Function(fields.Char('Value'),
         'on_change_with_current_value')
     type = fields.Selection([(None, '')] + FIELD_TYPE_SELECTION, 'Field Type',
-        required=False)
-    store = fields.Boolean('Store')
+        states={
+            'readonly': Eval('sheet_state') != 'draft',
+            })
+    store = fields.Boolean('Store', states={
+            'readonly': Eval('sheet_state') != 'draft',
+            })
     related_model = fields.Many2One('ir.model', 'Related Model', states={
             'required': Eval('type') == 'many2one',
             'invisible': Eval('type') != 'many2one',
+            'readonly': Eval('sheet_state') != 'draft',
             })
+    sheet_state = fields.Function(fields.Selection(SHEET_STATES, 'Sheet State'),
+        'on_change_with_sheet_state')
 
     @staticmethod
     def default_store():
@@ -668,6 +685,11 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     @fields.depends('type')
     def on_change_with_store(self):
         return True if self.type else False
+
+    @fields.depends('sheet', '_parent_sheet.state')
+    def on_change_with_sheet_state(self, name=None):
+        if self.sheet:
+            return self.sheet.state
 
     def formula_error(self):
         if not self.expression:
