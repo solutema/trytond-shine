@@ -5,8 +5,19 @@
     <field name="type"/>
     <label name="source"/>
     <field name="source"/>
+    <separator name="model" colspan="6"/>
     <label name="model"/>
-    <field name="model" colspan="5"/>
+    <field name="model"/>
+    <newline/>
+    <label name="model_view_search"/>
+    <field name="model_view_search"/>
+    <label name="model_domain"/>
+    <field name="model_domain" colspan="3" widget="pyson"/>
+    <label name="model_context"/>
+    <field name="model_context" widget="pyson"/>
+    <label name="model_order"/>
+    <field name="model_order" widget="pyson"/>
+    <separator name="sheet" colspan="6"/>
     <label name="sheet"/>
     <field name="sheet" colspan="5"/>
     <separator name="query" colspan="6"/>

@@ -8,15 +8,17 @@ from dateutil import relativedelta
 from trytond import backend
 from trytond.model import (Workflow, ModelSQL, ModelView, fields,
     sequence_ordered)
-from trytond.pyson import Eval, Bool
+from trytond.pyson import PYSONEncoder, PYSONDecoder, PYSON, Eval, Bool
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.tools import cursor_dict
-from trytond.pyson import PYSONEncoder
+from trytond.config import config
 from .tag import TaggedMixin
 
 __all__ = ['Sheet', 'DataSet', 'Formula', 'View', 'ViewTableFormula', 'Table',
     'TableField', 'TableView']
+
+RECORD_CACHE_SIZE = config.get('cache', 'record')
 
 FIELD_TYPES = [
     # (Internal selection name, Tryton field name, String, fields.Class, DB
@@ -389,6 +391,22 @@ class DataSet(ModelSQL, ModelView):
     model = fields.Many2One('ir.model', 'Model', states={
             'invisible': Eval('source') != 'model',
             }, depends=['source'])
+    model_name = fields.Function(fields.Char('Model Name'),
+        'on_change_with_model_name')
+    model_view_search = fields.Many2One('ir.ui.view_search', 'Search', domain=[
+            ('model', '=', Eval('model_name')),
+            ], states={
+            'invisible': Eval('source') != 'model',
+            }, depends=['model_name', 'source'])
+    model_domain = fields.Char('Domain', states={
+            'invisible': Eval('source') != 'model',
+            }, depends=['source'])
+    model_context = fields.Char('Context', states={
+            'invisible': Eval('source') != 'model',
+            }, depends=['source'])
+    model_order = fields.Char('Order', states={
+            'invisible': Eval('source') != 'model',
+            }, depends=['source'])
     sheet = fields.Many2One('shine.sheet', 'Sheet', domain=[
             ('type', '=', Eval('type')),
             ], states={
@@ -406,6 +424,88 @@ class DataSet(ModelSQL, ModelView):
     def default_source():
         return 'model'
 
+    @fields.depends('model')
+    def on_change_with_model_name(self, name=None):
+        return self.model.model if self.model else None
+
+    @fields.depends('model_view_search')
+    def on_change_model_view_search(self):
+        if self.model_view_search:
+            self.model_domain = self.model_view_search.domain
+
+    @classmethod
+    def __setup__(cls):
+        super(DataSet, cls).__setup__()
+        cls._error_messages.update({
+                'invalid_domain': ('Invalid domain "%(domain)s" on Data Set '
+                    '"%(dataset)s".'),
+                'invalid_context': ('Invalid context "%(context)s" on Data Set '
+                    '"%(dataset)s".'),
+                })
+
+    @classmethod
+    def validate(cls, datasets):
+        for dataset in datasets:
+            dataset.check_domain()
+            dataset.check_context()
+
+    def check_domain(self):
+        try:
+            value = PYSONDecoder().decode(self.model_domain)
+        except Exception:
+            self.raise_user_error('invalid_domain', {
+                    'domain': self.model_domain,
+                    'dataset': self.rec_name,
+                    })
+        if isinstance(value, PYSON):
+            if not value.types() == set([list]):
+                self.raise_user_error('invalid_domain', {
+                        'domain': self.model_domain,
+                        'dataset': self.rec_name,
+                        })
+        elif not isinstance(value, list):
+            self.raise_user_error('invalid_domain', {
+                    'domain': self.model_domain,
+                    'dataset': self.rec_name,
+                    })
+        else:
+            try:
+                fields.domain_validate(value)
+            except Exception:
+                self.raise_user_error('invalid_domain', {
+                        'domain': self.model_domain,
+                        'dataset': self.rec_name,
+                        })
+
+    def check_context(self):
+        if not self.model_context:
+            return
+        try:
+            value = PYSONDecoder().decode(self.model_context)
+        except Exception:
+            self.raise_user_error('invalid_context', {
+                    'context': self.model_context,
+                    'dataset': self.rec_name,
+                    })
+        if isinstance(value, PYSON):
+            if not value.types() == set([dict]):
+                self.raise_user_error('invalid_context', {
+                        'context': self.model_context,
+                        'dataset': self.rec_name,
+                        })
+        elif not isinstance(value, dict):
+            self.raise_user_error('invalid_context', {
+                    'context': self.model_context,
+                    'dataset': self.rec_name,
+                    })
+        else:
+            try:
+                fields.context_validate(value)
+            except Exception:
+                self.raise_user_error('invalid_context', {
+                        'context': self.model_context,
+                        'dataset': self.rec_name,
+                        })
 
     def get_fields_model(self):
         res = []
@@ -462,15 +562,25 @@ class DataSet(ModelSQL, ModelView):
     def get_data_model(self):
         pool = Pool()
         Model = pool.get(self.model.model)
-        limit = 2000
+        domain = []
+        if self.model_domain:
+            domain = PYSONDecoder().decode(self.model_domain)
+        context = {}
+        if self.model_context:
+            context = PYSONDecoder().decode(self.model_context)
+        order = [('id', 'ASC')]
+        if self.model_order:
+            order = PYSONDecoder().decode(self.model_order)
+        limit = RECORD_CACHE_SIZE
         offset = 0
-        while True:
-            records = Model.search([], offset=offset, limit=limit,
-                order=[('id', 'ASC')])
-            if records:
-                yield records
-            if len(records) < limit:
-                break
+        with Transaction().set_context(context):
+            while True:
+                records = Model.search(domain, offset=offset, limit=limit,
+                    order=order)
+                if records:
+                    yield records
+                if len(records) < limit:
+                    break
 
     def get_data_sheet(self):
         query = 'SELECT * FROM "%s"' % self.sheet.data_table_name
