@@ -456,6 +456,8 @@ class DataSet(ModelSQL, ModelView):
             dataset.check_context()
 
     def check_domain(self):
+        if not self.model_domain:
+            return
         try:
             value = PYSONDecoder().decode(self.model_domain)
         except Exception:
