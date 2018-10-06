@@ -5,32 +5,74 @@ from trytond.transaction import Transaction
 from trytond.tools import cursor_dict
 from .shine import FIELD_TYPE_TRYTON, FIELD_TYPE_CAST
 
-class ClassProperty(property):
-    def __get__(self, cls, owner):
-        print('GETTING')
-        return self.fget.__get__(None, owner)()
 
-    def __contains__(self, cls, key):
-        print('CONTAINS?')
-        return key in self.numbers
+class Adapter:
+    def __getattr__(self, name):
+        fields = self.get_fields()
+        return getattr(fields, name)
+
+    def __contains__(self, key):
+        fields = self.get_fields()
+        return fields.__contains__(key)
+
+    def __iter__(self):
+        fields = self.get_fields()
+        return fields
+
+    def __getitem__(self, name):
+        fields = self.get_fields()
+        return fields.__getitem__(name)
+
+    def get_fields(self):
+        # TODO: Cache
+        Data = Pool().get('shine.data')
+        table = Data.get_table()
+        res = {}
+        for field in table.fields:
+            if field.type == 'char':
+                obj = fields.Char(field.string)
+            elif field.type == 'multiline':
+                obj = fields.Text(field.string)
+            elif field.type == 'integer':
+                obj = fields.Integer(field.string)
+            elif field.type == 'float':
+                obj = fields.Float(field.string)
+            elif field.type == 'boolean':
+                obj = fields.Boolean(field.string)
+            elif field.type == 'numeric':
+                obj = fields.Numeric(field.string)
+            elif field.type == 'date':
+                obj = fields.Date(field.string)
+            elif field.type == 'datetime':
+                obj = fields.DateTime(field.string)
+            elif field.type == 'timestamp':
+                obj = fields.Timestamp(field.string)
+            elif field.type == 'many2one':
+                obj = fields.Many2One(field.related_model.model, field.string)
+            elif field.type in ('binary', 'icon'):
+                obj = fields.Binary(field.string)
+            obj.name = field.name
+            res[field.name] = obj
+        if not 'id' in res:
+            obj = fields.Integer('ID')
+            obj.name = 'id'
+            res[field.name] = obj
+
+        return res
 
 
 class Data(ModelSQL, ModelView):
     'Shine Data'
     __name__ = 'shine.data'
 
-    def get_fields(cls):
-        print('WERE HERE')
-        table = cls.get_table()
-        res = {}
-        for field in table.fields:
-            res[field.name] = fields.Char('')
-        return res
+    @classmethod
+    def __post_setup__(cls):
+        super(Data, cls).__post_setup__()
+        cls._fields = Adapter()
 
     @classmethod
-    def __setup__(cls):
-        super(Data, cls).__setup__()
-        cls._fields = classmethod(cls.get_fields)
+    def __table__(cls):
+        return cls.get_sql_table()
 
     @classmethod
     def default_get(cls, fields_names, with_rec_name=True):
@@ -126,7 +168,6 @@ class Data(ModelSQL, ModelView):
     @classmethod
     def fields_view_get(cls, view_id=None, view_type='form'):
         #sheet = cls.get_sheet()
-        print('VIEW GET')
         table = cls.get_table()
         view = cls.get_view()
 
@@ -136,7 +177,6 @@ class Data(ModelSQL, ModelView):
         #if sheet and sheet.type == 'singleton':
             #view_type = 'form'
 
-        print('VIEW', view)
         if not view.id:
             if view_type == 'tree':
                 fields, arch = cls.get_tree_view(table, view)
@@ -158,27 +198,15 @@ class Data(ModelSQL, ModelView):
             }
         return res
 
-    def __getattr__(cls, name):
-        print('GOT KEY, ', name)
-
-    def __getattribute__(self, name):
-        print('GOT ATR', name)
-
     @classmethod
     def search(cls, domain, offset=0, limit=None, order=None, count=False,
             query=False):
         table = cls.get_sql_table()
 
-        #print('CURRENT _fields', cls._fields)
-        #cls._fields = classmethod(cls.get_fields)
-        #cls._fields = property(cls.get_fields)
-        #print('NOW _fields', cls._fields)
-        #del cls._fields
-        print('GET: ', cls._fields)
-
         cursor = Transaction().connection.cursor()
         # Get domain clauses
-        tables, expression = cls.search_domain(domain)
+        tables, expression = cls.search_domain(domain,
+            tables={None: (table, None)})
 
         select = table.select(table.id, where=expression, limit=limit,
             offset=offset)
@@ -193,8 +221,11 @@ class Data(ModelSQL, ModelView):
         sql_table = cls.get_sql_table()
         table = cls.get_table()
 
+        if not ids:
+            return []
+
         cursor = Transaction().connection.cursor()
-        cursor.execute(*sql_table.select())
+        cursor.execute(*sql_table.select(where=sql_table.id.in_(ids)))
         fetchall = list(cursor_dict(cursor))
 
         to_cast = {}
@@ -227,7 +258,7 @@ class Data(ModelSQL, ModelView):
             query = table.insert(fields, values=[values], returning=[table.id])
             cursor.execute(*query)
             ids.append(cursor.fetchone()[0])
-        return ids
+        return cls.browse(ids)
 
     @classmethod
     def write(cls, *args):
@@ -241,7 +272,8 @@ class Data(ModelSQL, ModelView):
             for key, value in values.items():
                 fields.append(sql.Column(table, key))
                 to_update.append(value)
-            query = table.update(fields, to_update)
+            query = table.update(fields, to_update,
+                where=table.id.in_([x.id for x in records]))
             cursor.execute(*query)
 
     @classmethod
@@ -286,4 +318,9 @@ class Data(ModelSQL, ModelView):
     def get_sql_table(cls):
         return sql.Table(cls.get_table().name)
 
-    # TODO: copy()
+    @classmethod
+    def copy(cls, records, default=None):
+        records = cls.read([x.id for x in records if x.id])
+        for record in records:
+            del record['id']
+        return cls.create(records)
