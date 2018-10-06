@@ -3,6 +3,7 @@ from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.tools import cursor_dict
+from trytond.pyson import PYSONEncoder
 from .shine import FIELD_TYPE_TRYTON, FIELD_TYPE_CAST
 
 
@@ -96,6 +97,8 @@ class Data(ModelSQL, ModelView):
                 for model in Model.search([]):
                     selection.append((model.model, model.name))
                 res[field.name]['selection'] = selection
+            if field.type == 'timestamp':
+                res[field.name]['format'] = PYSONEncoder().encode('%H:%M:%S.%f')
         return res
 
     @classmethod
