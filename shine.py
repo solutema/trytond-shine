@@ -223,8 +223,7 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
 
     @classmethod
     def search_tags_char(cls, name, clause):
-        # TODO: Implement
-        return []
+        return [('tags.name',) + tuple(clause[1:])]
 
     @classmethod
     @ModelView.button
