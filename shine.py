@@ -845,6 +845,16 @@ class View(ModelSQL, ModelView):
                     },
                 })
 
+    @fields.depends('type', 'chart_type')
+    def on_change_type(self):
+        if self.type == 'chart' and not self.chart_type:
+            self.chart_type = 'vbar'
+
+    @fields.depends('chart_type', 'chart_interpolation')
+    def on_change_chart_type(self):
+        if self.chart_type == 'line' and not self.chart_interpolation:
+            self.chart_interpolation = 'linear'
+
     def get_current_table(self, name):
         return self.sheet.current_table.id if self.sheet.current_table else None
 
@@ -942,7 +952,11 @@ class View(ModelSQL, ModelView):
 
     def get_view_info_chart(self):
         x = '<field name="%s"/>\n' % self.chart_group.alias
-        y = '<field name="%s"/>\n' % self.chart_value.alias
+
+        attributes = ''
+        if self.chart_interpolation:
+            attributes = 'interpolation="%s"' % self.chart_interpolation
+        y = '<field name="%s" %s/>\n' % (self.chart_value.alias, attributes)
 
         xml = ('<?xml version="1.0"?>\n'
             '<graph type="%(type)s" legend="%(legend)s">\n'
@@ -954,6 +968,7 @@ class View(ModelSQL, ModelView):
             '    </y>'
             '</graph>') % {
                 'type': self.chart_type,
+                '': self.chart_interpolation,
                 'legend': self.chart_legend and '1' or '0',
                 'x': x,
                 'y': y,
