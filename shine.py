@@ -615,17 +615,17 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     sheet = fields.Many2One('shine.sheet', 'Sheet', required=True,
         ondelete='CASCADE', states={
             'readonly': (Eval('sheet_state') != 'draft') & Eval('sheet'),
-            })
+            }, depends=['sheet_state'])
     name = fields.Char('Name', required=True, states={
             'readonly': Eval('sheet_state') != 'draft',
-            })
+            }, depends=['sheet_state'])
     alias = fields.Char('Alias', required=True, states={
             'readonly': Eval('sheet_state') != 'draft',
-            })
+            }, depends=['sheet_state'])
     field_name = fields.Function(fields.Char('Field Name'), 'get_field_name')
     expression = fields.Char('Formula', states={
             'readonly': Eval('sheet_state') != 'draft',
-            })
+            }, depends=['sheet_state'])
     expression_icon = fields.Function(fields.Char('Expression Icon'),
         'on_change_with_expression_icon')
     current_value = fields.Function(fields.Char('Value'),
@@ -633,15 +633,15 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     type = fields.Selection([(None, '')] + FIELD_TYPE_SELECTION, 'Field Type',
         states={
             'readonly': Eval('sheet_state') != 'draft',
-            })
+            }, depends=['sheet_state'])
     store = fields.Boolean('Store', states={
             'readonly': Eval('sheet_state') != 'draft',
-            })
+            }, depends=['sheet_state'])
     related_model = fields.Many2One('ir.model', 'Related Model', states={
             'required': Eval('type') == 'many2one',
             'invisible': Eval('type') != 'many2one',
             'readonly': Eval('sheet_state') != 'draft',
-            })
+            }, depends=['sheet_state'])
     sheet_state = fields.Function(fields.Selection(SHEET_STATES, 'Sheet State'),
         'on_change_with_sheet_state')
 
