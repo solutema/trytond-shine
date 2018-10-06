@@ -9,7 +9,10 @@
     <label name="alias"/>
     <field name="alias"/>
     <label name="expression"/>
-    <field name="expression" colspan="3"/>
+    <group col="2" colspan="3">
+        <image name="expression_icon"/>
+        <field name="expression"/>
+    </group>
     <label name="type"/>
     <field name="type"/>
     <label name="related_model"/>
