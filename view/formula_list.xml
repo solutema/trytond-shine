@@ -2,7 +2,7 @@
     <field name="sheet"/>
     <field name="name"/>
     <field name="alias"/>
-    <field name="expression"/>
+    <field name="expression" icon="expression_icon"/>
     <field name="type"/>
     <field name="related_model"/>
     <field name="store"/>

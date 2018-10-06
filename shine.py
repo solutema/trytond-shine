@@ -615,6 +615,8 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     alias = fields.Char('Alias', required=True)
     field_name = fields.Function(fields.Char('Field Name'), 'get_field_name')
     expression = fields.Char('Formula')
+    expression_icon = fields.Function(fields.Char('Expression Icon'),
+        'on_change_with_expression_icon')
     current_value = fields.Function(fields.Char('Value'),
         'on_change_with_current_value')
     type = fields.Selection([(None, '')] + FIELD_TYPE_SELECTION, 'Field Type',
@@ -666,9 +668,53 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     def on_change_with_store(self):
         return True if self.type else False
 
+    def formula_error(self):
+        if not self.expression:
+            return
+        if not self.expression.startswith('='):
+            return
+        parser = formulas.Parser()
+        try:
+            ast = parser.ast(self.expression)[1].compile()
+            missing = (set([x.lower() for x in ast.inputs]) -
+                self.previous_formulas())
+            if not missing:
+                return
+            return ('warning', 'Referenced alias "%s" not found.' %
+                ', '.join(missing))
+        except formulas.errors.FormulaError as error:
+            msg = error.msg.replace('\n', ' ')
+            if error.args[1:]:
+                msg = msg % error.args[1:]
+            return ('error', msg)
+
+    def previous_formulas(self):
+        res = []
+        for formula in self.sheet.formulas:
+            if formula == self:
+                break
+            res.append(formula.alias)
+        return set(res)
+
+    @fields.depends('expression')
+    def on_change_with_expression_icon(self, name=None):
+        if not self.expression:
+            return ''
+        if not self.expression.startswith('='):
+            return ''
+        error = self.formula_error()
+        if not error:
+            return 'green'
+        if error[0] == 'warning':
+            return 'orange'
+        return 'red'
+
     @fields.depends('expression', '_parent_sheet.values')
     def on_change_with_current_value(self, name=None):
-        return self.expression
+        res = self.formula_error()
+        if not res:
+            return
+        return res[1]
 
     def get_field_name(self, name):
         return 'field_%d' % self.id
