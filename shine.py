@@ -770,7 +770,7 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
             res.append(formula.alias)
         return set(res)
 
-    @fields.depends('expression')
+    @fields.depends('expression', 'sheet', '_parent_sheet.formulas')
     def on_change_with_expression_icon(self, name=None):
         if not self.expression:
             return ''
@@ -783,7 +783,7 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
             return 'orange'
         return 'red'
 
-    @fields.depends('expression', '_parent_sheet.values')
+    @fields.depends('expression', 'sheet', '_parent_sheet.formulas')
     def on_change_with_current_value(self, name=None):
         res = self.formula_error()
         if not res:
