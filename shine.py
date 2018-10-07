@@ -1102,9 +1102,6 @@ class Table(ModelSQL, ModelView):
         fields = {x.name for x in self.fields}
         from_fields = {x.name for x in from_table.fields}
         missing = sorted(list(from_fields - fields))
-        print('Fields: ', fields)
-        print('From Fields: ', from_fields)
-        print('Missing: ', missing)
 
         existing = fields & from_fields
         fields = {}
