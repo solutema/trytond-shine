@@ -243,6 +243,7 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
         pool = Pool()
         Table = pool.get('shine.table')
         Field = pool.get('shine.table.field')
+        Data = pool.get('shine.data')
 
         for sheet in sheets:
             sheet.check_formulas()
@@ -262,6 +263,8 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                         string=formula.name,
                         type=formula.type,
                         related_model=formula.related_model,
+                        formula=(formula.expression if
+                            formula.expression.startswith('=') else None),
                         ))
             table.fields = fields
             table.create_table()
@@ -271,6 +274,8 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                     and sheet.current_table
                     and sheet.current_table.count()):
                 table.copy_from(sheet.current_table)
+                with Transaction().set_context({'shine_table': table.id}):
+                    Data.update_formulas()
 
             sheet.current_table = table
         cls.save(sheets)
@@ -363,7 +368,8 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
         direct_fields = [x.alias for x in self.formulas if not
             x.expression]
         formula_fields = [x.alias for x in self.formulas if x.expression]
-        sql_fields = [sql.Column(table, x) for x in direct_fields + formula_fields]
+        sql_fields = [sql.Column(table, x) for x in direct_fields +
+            formula_fields]
 
         parser = formulas.Parser()
         formula_fields = [(x, parser.ast(x.expression)[1].compile() if
@@ -393,9 +399,9 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                             if field.expression.startswith('='):
                                 inputs = []
                                 for input_ in ast.inputs.keys():
-                                    # TODO: Check if input_ exists and raise proper
-                                    # user error Indeed, we should check de
-                                    # formulas when we move to active state
+                                    # TODO: Check if input_ exists and raise
+                                    # proper user error Indeed, we should check
+                                    # de formulas when we move to active state
                                     inputs.append(values[input_.lower()])
                                 value = ast(inputs)[0]
                             else:
@@ -1182,6 +1188,20 @@ class TableField(ModelSQL, ModelView):
     type = fields.Selection([(None, '')] + FIELD_TYPE_SELECTION, 'Field Type',
         required=False)
     related_model = fields.Many2One('ir.model', 'Related Model')
+    formula = fields.Char('On Change With Formula')
+    inputs = fields.Function(fields.Char('On Change With Inputs'), 'get_inputs')
+
+    def get_inputs(self, name):
+        if not self.formula:
+            return
+        parser = formulas.Parser()
+        ast = parser.ast(self.formula)[1].compile()
+        return (' '.join([x for x in ast.inputs])).lower()
+
+    def get_ast(self):
+        parser = formulas.Parser()
+        ast = parser.ast(self.formula)[1].compile()
+        return ast
 
 
 class TableView(ModelSQL, ModelView):

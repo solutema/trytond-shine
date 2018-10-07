@@ -1,4 +1,5 @@
 import sql
+import formulas
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.transaction import Transaction
@@ -84,6 +85,23 @@ class Data(ModelSQL, ModelView):
     def default_get(cls, fields_names, with_rec_name=True):
         return {}
 
+    def on_change_with(self, fieldnames):
+        table = self.get_table()
+        res = {}
+        for field in table.fields:
+            if not field.name in fieldnames:
+                continue
+            ast = field.get_ast()
+            inputs = field.inputs.split()
+            inputs = [getattr(self, x) for x in inputs]
+            value = ast(*inputs)
+            if not isinstance(value, str):
+                value = value.tolist()
+            if isinstance(value, formulas.tokens.operand.XlError):
+                value = None
+            res[field.name] = value
+        return res
+
     @classmethod
     def fields_get(cls, fields_names=None):
         Model = Pool().get('ir.model')
@@ -96,7 +114,10 @@ class Data(ModelSQL, ModelView):
                     'type': FIELD_TYPE_TRYTON[field.type],
                     'relation': (field.related_model.model if
                         field.related_model else None),
+                    'readonly': bool(field.formula),
                     }
+            if field.inputs:
+                res[field.name]['on_change_with'] = field.inputs.split()
             if field.type == 'reference':
                 selection = []
                 for model in Model.search([]):
@@ -256,6 +277,7 @@ class Data(ModelSQL, ModelView):
     def create(cls, vlist):
         table = cls.get_sql_table()
 
+
         cursor = Transaction().connection.cursor()
         ids = []
         for record in vlist:
@@ -268,23 +290,52 @@ class Data(ModelSQL, ModelView):
             query = table.insert(fields, values=[values], returning=[table.id])
             cursor.execute(*query)
             ids.append(cursor.fetchone()[0])
-        return cls.browse(ids)
+        records = cls.browse(ids)
+        cls.update_formulas(records)
+        return records
+
+    @classmethod
+    def update_formulas(cls, records=None):
+        table = cls.get_table()
+        if not records:
+            records = cls.search([])
+
+        formula_fields = [x.name for x in table.fields if x.formula]
+        if not formula_fields:
+            return
+        actions = []
+        for record in records:
+            actions.append([record])
+            actions.append(record.on_change_with(formula_fields))
+        cls.write(*actions)
 
     @classmethod
     def write(cls, *args):
+        table = cls.get_table()
+        formula_fields = [x.name for x in table.fields if x.formula]
+
         table = cls.get_sql_table()
         cursor = Transaction().connection.cursor()
 
+        has_formulas = False
+        all_records = []
         actions = iter(args)
         for records, values in zip(actions, actions):
+            all_records += records
             fields = []
             to_update = []
             for key, value in values.items():
                 fields.append(sql.Column(table, key))
                 to_update.append(value)
+                if key in formula_fields:
+                    has_formulas = True
             query = table.update(fields, to_update,
                 where=table.id.in_([x.id for x in records]))
             cursor.execute(*query)
+
+        if not has_formulas and formula_fields:
+            cls.update_formulas(all_records)
+
 
     @classmethod
     def delete(cls, records):
