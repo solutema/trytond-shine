@@ -1127,6 +1127,9 @@ class Table(ModelSQL, ModelView):
                 'table': self.rec_name,
                 })
 
+        if not existing:
+            return
+
         existing = sorted(list(existing))
         table = sql.Table(from_table.name)
         subquery = table.select()
