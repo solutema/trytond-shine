@@ -219,6 +219,7 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                     'sheet "%s".'),
                 'invalid_formula': ('Invalid formula "%(formula)s" in Sheet '
                     '"%(sheet)s".'),
+                'no_formulas': 'Sheet "%s" has no formulas.',
                 })
 
     @fields.depends('name', 'alias')
@@ -275,13 +276,18 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
         cls.save(sheets)
 
     def check_formulas(self):
+        any_formula = False
         for formula in self.formulas:
+            if formula.store:
+                any_formula = True
             icon = formula.expression_icon
             if icon and icon != 'green':
                 self.raise_user_error('invalid_formula', {
                         'sheet': self.rec_name,
                         'formula': formula.rec_name,
                         })
+        if not any_formula:
+            self.raise_user_error('no_formulas', self.rec_name)
 
     def check_icons(self):
         was_icon = False
