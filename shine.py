@@ -1073,6 +1073,13 @@ class Table(ModelSQL, ModelView):
             table.add_column(field.name, sql_type)
         return table
 
+    def drop_table(self):
+        transaction = Transaction()
+        TableHandler = backend.get('TableHandler')
+        TableHandler.drop_table('', self.name, cascade=True)
+        transaction.database.sequence_delete(transaction.connection,
+            self.name + '_id_seq')
+
     @classmethod
     def remove_old_tables(cls, days=0):
         Sheet = Pool().get('shine.sheet')
@@ -1087,13 +1094,8 @@ class Table(ModelSQL, ModelView):
 
     @classmethod
     def delete(cls, tables):
-        transaction = Transaction()
-        TableHandler = backend.get('TableHandler')
         for table in tables:
-            TableHandler.drop_table('', table.name, cascade=True)
-            transaction.database.sequence_delete(transaction.connection,
-                table.name + '_id_seq')
-
+            table.drop_table()
         super(Table, cls).delete(tables)
 
 
