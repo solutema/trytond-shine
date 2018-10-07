@@ -321,7 +321,7 @@ class Data(ModelSQL, ModelView):
         if not table:
             view = cls.get_view()
             if view.id:
-                table = view.current_table
+                table = view.current_table.id
         if table:
             return Table(table)
 
