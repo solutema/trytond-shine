@@ -265,6 +265,12 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
             table.fields = fields
             table.create_table()
             table.save()
+
+            if (not sheet.dataset
+                    and sheet.current_table
+                    and sheet.current_table.count()):
+                table.copy_from(sheet.current_table)
+
             sheet.current_table = table
         cls.save(sheets)
 
@@ -1049,6 +1055,18 @@ class Table(ModelSQL, ModelView):
     fields = fields.One2Many('shine.table.field', 'table',
         'Fields')
 
+    @classmethod
+    def __setup__(cls):
+        super(Table, cls).__setup__()
+        cls._error_messages.update({
+                'copy_from_warning': ('Data from the The following fields will '
+                    'be lost because they no longer exist or their type has '
+                    'changed:\n\n'
+                    '%(fields)s\n\n'
+                    'Are you sure you want to copy data from '
+                    '"%(from_table)s" to "%(table)s"?')
+                })
+
     def create_table(self):
         TableHandler = backend.get('TableHandler')
 
@@ -1079,6 +1097,55 @@ class Table(ModelSQL, ModelView):
         TableHandler.drop_table('', self.name, cascade=True)
         transaction.database.sequence_delete(transaction.connection,
             self.name + '_id_seq')
+
+    def copy_from(self, from_table):
+        fields = {x.name for x in self.fields}
+        from_fields = {x.name for x in from_table.fields}
+        missing = sorted(list(from_fields - fields))
+        print('Fields: ', fields)
+        print('From Fields: ', from_fields)
+        print('Missing: ', missing)
+
+        existing = fields & from_fields
+        fields = {}
+        for field in self.fields:
+            if field.name in existing:
+                fields[field.name] = field.type
+
+        different_types = []
+        for field in from_table.fields:
+            if field.name in existing:
+                if (FIELD_TYPE_TRYTON[field.type] !=
+                        FIELD_TYPE_TRYTON[fields[field.name]]):
+                    different_types.append("%s (%s -> %s)" % (field.name,
+                            field.type, fields[field.name]))
+                    existing.remove(field.name)
+
+        if missing or different_types:
+            message = ['- %s' % x for x in (missing + different_types)]
+            self.raise_user_warning('shine_copy_from_warning.%s.%s' %
+                (self.name, from_table.id), 'copy_from_warning', {
+                'fields': '\n'.join(message),
+                'from_table': from_table.rec_name,
+                'table': self.rec_name,
+                })
+
+        existing = sorted(list(existing))
+        table = sql.Table(from_table.name)
+        subquery = table.select()
+        subquery.columns = [sql.Column(table, x) for x in existing]
+        table = sql.Table(self.name)
+        query = table.insert([sql.Column(table, x) for x in existing], subquery)
+
+        cursor = Transaction().connection.cursor()
+        cursor.execute(*query)
+
+    def count(self):
+        table = sql.Table(self.name)
+        cursor = Transaction().connection.cursor()
+        query = table.select(sql.aggregate.Count(1))
+        cursor.execute(*query)
+        return cursor.fetchone()[0]
 
     @classmethod
     def remove_old_tables(cls, days=0):
