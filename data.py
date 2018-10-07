@@ -223,8 +223,8 @@ class Data(ModelSQL, ModelView):
         if query:
             return select
         cursor.execute(*select)
-        res=  [x[0] for x in cursor.fetchall()]
-        return res
+        res = [x[0] for x in cursor.fetchall()]
+        return cls.browse(res)
 
     @classmethod
     def read(cls, ids, fields_names=None):
