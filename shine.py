@@ -217,6 +217,8 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                     'fields of Icon type in sheet "%s".'),
                 'last_icon': ('The last formula cannot be of type Icon in '
                     'sheet "%s".'),
+                'invalid_formula': ('Invalid formula "%(formula)s" in Sheet '
+                    '"%(sheet)s".'),
                 })
 
     @fields.depends('name', 'alias')
@@ -242,6 +244,7 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
         Field = pool.get('shine.table.field')
 
         for sheet in sheets:
+            sheet.check_formulas()
             sheet.check_icons()
 
             sheet.revision += 1
@@ -264,6 +267,15 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
             table.save()
             sheet.current_table = table
         cls.save(sheets)
+
+    def check_formulas(self):
+        for formula in self.formulas:
+            icon = formula.expression_icon
+            if icon and icon != 'green':
+                self.raise_user_error('invalid_formula', {
+                        'sheet': self.rec_name,
+                        'formula': formula.rec_name,
+                        })
 
     def check_icons(self):
         was_icon = False
