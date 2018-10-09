@@ -263,7 +263,7 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                         string=formula.name,
                         type=formula.type,
                         related_model=formula.related_model,
-                        formula=(formula.expression if
+                        formula=(formula.expression if formula.expression and
                             formula.expression.startswith('=') else None),
                         ))
             table.fields = fields
