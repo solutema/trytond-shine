@@ -1,5 +1,6 @@
 import sql
 import formulas
+import schedula
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.transaction import Transaction
@@ -94,7 +95,11 @@ class Data(ModelSQL, ModelView):
             ast = field.get_ast()
             inputs = field.inputs.split()
             inputs = [getattr(self, x) for x in inputs]
-            value = ast(*inputs)
+            try:
+                value = ast(*inputs)
+            except schedula.utils.exc.DispatcherError as e:
+                self.raise_user_error(e.args[0] % e.args[1:])
+
             if not isinstance(value, str):
                 value = value.tolist()
             if isinstance(value, formulas.tokens.operand.XlError):
