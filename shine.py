@@ -761,7 +761,28 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
             return
         parser = formulas.Parser()
         try:
-            ast = parser.ast(self.expression)[1].compile()
+            builder = parser.ast(self.expression)[1]
+            # Find missing methods:
+            # https://github.com/vinci1it2000/formulas/issues/19#issuecomment-429793111
+            missing_methods = [k for k, v in builder.dsp.function_nodes.items()
+                if v['function'] is formulas.functions.not_implemented]
+            if missing_methods:
+                # When there are two occurrences of the same missing method,
+                # the function name returned looks like this:
+                #
+                # Sample formula: A(x) + A(y)
+                # missing_methods: ['A', 'A<0>']
+                #
+                # So in the line below we remove the '<0>' suffix
+                missing_methods = {k.split('<')[0] for x in missing_methods}
+                if len(missing_methods) == 1:
+                    msg = 'Unknown method: '
+                else:
+                    msg = 'Unknown methods: '
+                msg += (', '.join(missing_methods))
+                return ('error', msg)
+
+            ast = builder.compile()
             missing = (set([x.lower() for x in ast.inputs]) -
                 self.previous_formulas())
             if not missing:
