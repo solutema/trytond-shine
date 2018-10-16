@@ -319,6 +319,18 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
         pass
 
     @classmethod
+    def copy(cls, sheets, default=None):
+        if default is None:
+            default = {}
+        else:
+            default = default.copy()
+        default.setdefault('current_table', None)
+        # TODO: views should be copied and their formulas should point to the
+        # formulas of the new sheet
+        default.setdefault('views', None)
+        return super(Sheet, cls).copy(sheets, default)
+
+    @classmethod
     @ModelView.button
     def compute(cls, sheets):
         for sheet in sheets:
