@@ -1062,17 +1062,23 @@ class View(ModelSQL, ModelView):
     def create(cls, vlist):
         res = super(View, cls).create(vlist)
         cls.update_actions(res)
+        cls.update_table_views(res)
         return res
 
     @classmethod
     def write(cls, *args):
         super(View, cls).write(*args)
         actions = iter(args)
-        to_update = []
+        actions_to_update = []
+        table_views_to_update = []
         for views, values in zip(actions, actions):
             if not values.get('action'):
-                to_update += views
-        cls.update_actions(to_update)
+                actions_to_update += views
+            if not values.get('current_table_view'):
+                table_views_to_update += views
+
+        cls.update_actions(actions_to_update)
+        cls.update_table_views(table_views_to_update)
 
     @classmethod
     def delete(cls, views):
@@ -1087,7 +1093,7 @@ class View(ModelSQL, ModelView):
             action = view.action
             if not action:
                 action = ActWindow()
-            action.name = view.name
+            action.name = '%s (%s)' % (view.name, view.sheet.name)
             action.res_model = 'shine.data'
             action.usage = 'dashboard'
             action.context = PYSONEncoder().encode({
@@ -1108,6 +1114,32 @@ class View(ModelSQL, ModelView):
         to_delete = [x.action for x in views if x.action]
         if to_delete:
             ActWindow.delete(to_delete)
+
+    @classmethod
+    def update_table_views(cls, views):
+        TableView = Pool().get('shine.table.view')
+
+        to_delete = []
+        to_save = []
+        for view in views:
+            if (view.current_table_view and view.current_table_view.table ==
+                    view.sheet.current_table):
+                to_delete.append(view.current_table_view)
+            table_view = TableView()
+            table_view.table = view.current_table
+            table_view.system = view.system
+            view_info = view.get_view_info()
+            table_view.arch = view_info['arch']
+            table_view.type = view_info['type']
+            table_view
+            to_save.append(table_view)
+            view.current_table_view = table_view
+            view.save()
+
+        if to_delete:
+            TableView.delete(to_delete)
+        if to_save:
+            TableView.save(to_save)
 
     def get_view_info_table(self):
         # TODO: Duplicated from get_tree_view() but this one is not editable
@@ -1196,32 +1228,6 @@ class View(ModelSQL, ModelView):
 
     def get_view_info(self):
         return getattr(self, 'get_view_info_%s' % self.type)()
-
-    @classmethod
-    def update_table_views(cls, views):
-        TableView = Pool().get('shine.table.view')
-
-        to_delete = []
-        to_save = []
-        for view in views:
-            if (view.current_table_view and view.current_table_view.table ==
-                    view.sheet.current_table):
-                to_delete.append(view.current_table_view)
-            table_view = TableView()
-            table_view.table = view.current_table
-            table_view.system = view.system
-            view_info = view.get_view_info()
-            table_view.arch = view_info['arch']
-            table_view.type = view_info['type']
-            table_view
-            to_save.append(table_view)
-            view.current_table_view = table_view
-            view.save()
-
-        if to_delete:
-            TableView.delete(to_delete)
-        if to_save:
-            TableView.save(to_save)
 
 
 class ViewTableFormula(sequence_ordered(), ModelSQL, ModelView):
