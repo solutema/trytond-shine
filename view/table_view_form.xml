@@ -1,0 +1,15 @@
+<form>
+    <label name="table"/>
+    <field name="table"/>
+    <newline/>
+    <label name="type"/>
+    <field name="type"/>
+    <label name="system"/>
+    <field name="system"/>
+    <label name="field_names"/>
+    <field name="field_names"/>
+    <label name="field_childs"/>
+    <field name="field_childs"/>
+    <separator name="arch" colspan="4"/>
+    <field name="arch" colspan="4"/>
+</form>

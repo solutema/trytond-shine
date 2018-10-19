@@ -1,0 +1,65 @@
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="table_view_tree">
+            <field name="model">shine.table</field>
+            <field name="type">tree</field>
+            <field name="name">table_list</field>
+        </record>
+        <record model="ir.ui.view" id="table_view_form">
+            <field name="model">shine.table</field>
+            <field name="type">form</field>
+            <field name="name">table_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_table_form">
+            <field name="name">Tables</field>
+            <field name="res_model">shine.table</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_table_form_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="table_view_tree"/>
+            <field name="act_window" ref="act_table_form"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_table_form_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="table_view_form"/>
+            <field name="act_window" ref="act_table_form"/>
+        </record>
+        <menuitem parent="menu_configuration" sequence="1"
+            action="act_table_form" id="menu_table_form"/>
+
+        <record model="ir.ui.view" id="table_field_view_tree">
+            <field name="model">shine.table.field</field>
+            <field name="type">tree</field>
+            <field name="name">table_field_list</field>
+        </record>
+        <record model="ir.ui.view" id="table_field_view_form">
+            <field name="model">shine.table.field</field>
+            <field name="type">form</field>
+            <field name="name">table_field_form</field>
+        </record>
+
+        <record model="ir.ui.view" id="sheet_view_view_tree">
+            <field name="model">shine.table.view</field>
+            <field name="type">tree</field>
+            <field name="name">table_view_list</field>
+        </record>
+        <record model="ir.ui.view" id="table_view_view_form">
+            <field name="model">shine.table.view</field>
+            <field name="type">form</field>
+            <field name="name">table_view_form</field>
+        </record>
+
+        <record model="ir.cron" id="cron_remove_old_tables">
+            <field name="name">Remove Old Shine Tables</field>
+            <field name="request_user" ref="res.user_admin"/>
+            <field name="user" ref="user_remove_old_tables"/>
+            <field name="active" eval="True"/>
+            <field name="interval_number" eval="1"/>
+            <field name="interval_type">days</field>
+            <field name="number_calls" eval="-1"/>
+            <field name="repeat_missed" eval="False"/>
+            <field name="model">shine.table</field>
+            <field name="function">remove_old_tables</field>
+        </record>
+    </data>
+</tryton>

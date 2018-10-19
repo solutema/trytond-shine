@@ -7,8 +7,10 @@
     <field name="type"/>
     <button name="open" colspan="2"/>
     <newline/>
+    <label name="table_editable"/>
+    <field name="table_editable"/>
+    <button name="table_update_formulas" colspan="2"/>
     <field name="table_formulas" colspan="4"/>
-    <button name="table_update_formulas"/>
     <newline/>
     <label name="chart_type"/>
     <field name="chart_type"/>

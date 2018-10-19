@@ -1,0 +1,10 @@
+<tree>
+    <field name="table"/>
+    <field name="name"/>
+    <field name="string"/>
+    <field name="type"/>
+    <field name="related_model"/>
+    <field name="formula"/>
+    <field name="inputs"/>
+</tree>
+

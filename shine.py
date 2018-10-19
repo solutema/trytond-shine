@@ -5,7 +5,6 @@ from collections import OrderedDict
 from decimal import Decimal
 from datetime import datetime, date, time
 from dateutil import relativedelta
-from trytond import backend
 from trytond.model import (Workflow, ModelSQL, ModelView, fields,
     sequence_ordered, Unique)
 from trytond.pyson import PYSONEncoder, PYSONDecoder, PYSON, Eval, Bool
@@ -15,8 +14,7 @@ from trytond.tools import cursor_dict
 from trytond.config import config
 from .tag import TaggedMixin
 
-__all__ = ['Sheet', 'DataSet', 'Formula', 'View', 'ViewTableFormula', 'Table',
-    'TableField', 'TableView']
+__all__ = ['Sheet', 'DataSet', 'Formula', 'View', 'ViewTableFormula']
 
 RECORD_CACHE_SIZE = config.get('cache', 'record')
 
@@ -59,6 +57,12 @@ VALID_FIRST_SYMBOLS = 'abcdefghijklmnopqrstuvwxyz'
 VALID_NEXT_SYMBOLS = '_0123456789'
 VALID_SYMBOLS = VALID_FIRST_SYMBOLS + VALID_NEXT_SYMBOLS
 
+SELECTION_EDITABLE = [
+    ('bottom', 'Bottom'),
+    ('top', 'Top'),
+    ('disabled', 'Disabled'),
+    ]
+
 def convert_to_symbol(text):
     if not text:
         return 'x'
@@ -95,12 +99,6 @@ def cursor_object(cursor, size=None):
             break
         for row in rows:
             yield Record({d[0]: v for d, v in zip(cursor.description, row)})
-
-
-class ModelEmulation:
-    __doc__ = None
-    _table = None
-    __name__ = None
 
 
 class TimeoutException(Exception):
@@ -153,12 +151,16 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
             ])
     tags_char = fields.Function(fields.Char('Tags'), 'on_change_with_tags_char',
         searcher='search_tags_char')
-    current_table = fields.Many2One('shine.table', 'Table')
+    current_table = fields.Many2One('shine.table', 'Table', readonly=True)
     python_code = fields.Function(fields.Text('Python Code'), 'get_python_code')
+    quick_edition = fields.Selection(SELECTION_EDITABLE,
+        'Quick Edition', required=True, sort=False,
+        help='"Bottom" adds new records at the bottom of the list.\n'
+        '"Top" adds new records at the top of the list.')
 
     @staticmethod
     def default_quick_edition():
-        return True
+        return 'bottom'
 
     @staticmethod
     def default_type():
@@ -278,7 +280,88 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                     Data.update_formulas()
 
             sheet.current_table = table
+
         cls.save(sheets)
+        cls.reset_views(sheets)
+
+    @classmethod
+    def reset_views(cls, sheets):
+        pool = Pool()
+        View = pool.get('shine.view')
+
+        to_delete = []
+        for sheet in sheets:
+            to_delete += [x for x in sheet.views if x .system]
+        View.delete(to_delete)
+
+        sheets = cls.browse([x.id for x in sheets])
+
+        to_save = []
+        for sheet in sheets:
+            if sheet.type == 'sheet':
+                to_save.append(sheet.get_default_list_view())
+            to_save.append(sheet.get_default_form_view())
+
+        View.save(to_save)
+
+        to_update = []
+        for sheet in sheets:
+            to_update += sheet.views
+        View.update_table_views(View.browse([x.id for x in to_update]))
+
+    def get_default_list_view(self):
+        pool = Pool()
+        View = pool.get('shine.view')
+        ViewTableFormula = pool.get('shine.view.table.formula')
+
+        view = View()
+        view.sheet = self
+        view.name = 'Default List View'
+        view.system = True
+        view.type = 'table'
+        view.table_editable = self.quick_edition
+        table_formulas = []
+        for formula in self.formulas:
+            table_formulas.append(ViewTableFormula(formula=formula))
+        view.table_formulas = tuple(table_formulas)
+        return view
+
+    def get_default_form_view(self):
+        View = Pool().get('shine.view')
+
+        view = View()
+        view.sheet = self
+        view.name = 'Default Form View'
+        view.system = True
+        view.type = 'custom'
+        view.custom_type = 'form'
+
+        fields = []
+        for formula in self.formulas:
+            fields.append('<label name="%s"/>' % formula.alias)
+            if formula.type in ('datetime', 'timestamp'):
+                fields.append('<group col="2">'
+                    '<field name="%s" widget="date"/>'
+                    '<field name="%s" widget="time"/>'
+                    '</group>' % (formula.alias, formula.alias))
+                continue
+            if formula.type == 'icon':
+                fields.append('<image name="%s"/>\n' %
+                        (formula.alias))
+                continue
+
+            attributes = []
+            if formula.type == 'image':
+                attributes.append('widget="image"')
+
+            fields.append('<field name="%s" %s/>\n' % (formula.alias,
+                    ' '.join(attributes)))
+
+        view.custom_arch = ('<?xml version="1.0"?>\n'
+            '<form>\n'
+            '%s'
+            '</form>') % '\n'.join(fields)
+        return view
 
     def check_formulas(self):
         any_formula = False
@@ -774,7 +857,7 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
                 # missing_methods: ['A', 'A<0>']
                 #
                 # So in the line below we remove the '<0>' suffix
-                missing_methods = {k.split('<')[0] for x in missing_methods}
+                missing_methods = {x.split('<')[0] for x in missing_methods}
                 if len(missing_methods) == 1:
                     msg = 'Unknown method: '
                 else:
@@ -787,8 +870,8 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
                 self.previous_formulas())
             if not missing:
                 return
-            return ('warning', 'Referenced alias "%s" not found.' %
-                ', '.join(missing))
+            return ('warning', 'Referenced alias "%s" not found. Ensure it is '
+                'declared before this formula.' % ', '.join(missing))
         except formulas.errors.FormulaError as error:
             msg = error.msg.replace('\n', ' ')
             if error.args[1:]:
@@ -832,23 +915,41 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
             return
         self.alias = convert_to_symbol(self.name)
 
+VIEW_STATES = {
+    'readonly': Bool(Eval('system'))
+    }
+VIEW_DEPENDS = ['system']
 
 class View(ModelSQL, ModelView):
     'Shine View'
     __name__ = 'shine.view'
-    name = fields.Char('Name', required=True)
+    name = fields.Char('Name', required=True, states=VIEW_STATES,
+        depends=VIEW_DEPENDS)
     sheet = fields.Many2One('shine.sheet', 'Sheet', required=True,
-        ondelete='CASCADE')
+        ondelete='CASCADE', states=VIEW_STATES, depends=VIEW_DEPENDS)
     current_table = fields.Function(fields.Many2One('shine.table',
             'Current Table'), 'get_current_table')
+    current_table_view = fields.Many2One('shine.table.view',
+        'Current Table View', readonly=True)
     type = fields.Selection([
             ('table', 'Table'),
             ('chart', 'Chart'),
             ('dynamic_table', 'Dynamic Table'),
             ('custom', 'Custom'),
-            ], 'View Type', required=True, sort=False)
+            ], 'View Type', required=True, sort=False, states=VIEW_STATES,
+        depends=VIEW_DEPENDS)
+    system = fields.Boolean('System', readonly=True)
     action = fields.Many2One('ir.action.act_window', 'Action', readonly=True)
     arch = fields.Function(fields.Text('Architecture'), 'get_arch')
+    table_formulas = fields.One2Many('shine.view.table.formula', 'view',
+        'Formulas', states={
+            'invisible': Eval('type') != 'table',
+            }, depends=['sheet', 'type'])
+    table_editable = fields.Selection([(None, '')] + SELECTION_EDITABLE,
+        'Editable', sort=False, states={
+            'invisible': Eval('type') != 'table',
+            'required': Eval('type') == 'table',
+            }, depends=['type'])
     chart_type = fields.Selection([
             (None, ''),
             ('vbar', 'Vertical Bars'),
@@ -887,10 +988,6 @@ class View(ModelSQL, ModelView):
             'required': Eval('type') == 'chart',
             'invisible': Eval('type') != 'chart',
             })
-    table_formulas = fields.One2Many('shine.view.table.formula', 'view',
-        'Formulas', states={
-            'invisible': Eval('type') != 'table',
-            }, depends=['sheet', 'type'])
     custom_type = fields.Selection([
             (None, ''),
             ('tree', 'Tree'),
@@ -912,6 +1009,10 @@ class View(ModelSQL, ModelView):
             }, depends=['type'])
 
     @staticmethod
+    def default_editable():
+        return 'disabled'
+
+    @staticmethod
     def default_chart_legend():
         return True
 
@@ -925,7 +1026,7 @@ class View(ModelSQL, ModelView):
                     },
                 'open': {
                     'icon': 'tryton-forward',
-                    'depends': ['current_table'],
+                    'depends': ['current_table', 'current_table_view'],
                     },
                 })
 
@@ -969,13 +1070,14 @@ class View(ModelSQL, ModelView):
         actions = iter(args)
         to_update = []
         for views, values in zip(actions, actions):
-            to_update += views
+            if not values.get('action'):
+                to_update += views
         cls.update_actions(to_update)
 
     @classmethod
     def delete(cls, views):
-        super(View, cls).delete(views)
         cls.delete_actions(views)
+        super(View, cls).delete(views)
 
     @classmethod
     def update_actions(cls, views):
@@ -991,7 +1093,8 @@ class View(ModelSQL, ModelView):
             action.context = PYSONEncoder().encode({
                     'shine_view': view.id,
                     'shine_sheet': view.sheet.id,
-                    'shine_table': view.sheet.current_table.id,
+                    'shine_table': view.current_table.id,
+                    #'shine_table_view': view.current_table_view.id,
                     })
             action.save()
             if not view.action:
@@ -1000,15 +1103,16 @@ class View(ModelSQL, ModelView):
                 view.save()
 
     @classmethod
-    def delete_actions(cls, elements):
+    def delete_actions(cls, views):
         ActWindow = Pool().get('ir.action.act_window')
-        to_delete = [x.action for x in elements if x.action]
+        to_delete = [x.action for x in views if x.action]
         if to_delete:
             ActWindow.delete(to_delete)
 
     def get_view_info_table(self):
         # TODO: Duplicated from get_tree_view() but this one is not editable
         fields = []
+        current_icon = None
         for line in self.table_formulas:
             formula = line.formula
             if formula.type in ('datetime', 'timestamp'):
@@ -1017,17 +1121,28 @@ class View(ModelSQL, ModelView):
                 fields.append('<field name="%s" widget="time"/>\n' %
                     formula.alias)
                 continue
-
-            attributes = ''
+            if formula.type == 'icon':
+                current_icon = formula.alias
+                continue
+            attributes = []
             if formula.type in ('integer', 'float', 'numeric'):
-                attributes = 'sum="Total %s"' % formula.name
-            fields.append('<field name="%s" %s/>\n' % (formula.alias,
-                    attributes))
+                attributes.append('sum="Total %s"' % formula.name)
+            if current_icon:
+                attributes.append('icon="%s"' % current_icon)
+                current_icon = None
+            if formula.type == 'image':
+                attributes.append('widget="image"')
 
+            fields.append('<field name="%s" %s/>\n' % (formula.alias,
+                    ' '.join(attributes)))
+
+        attributes = ''
+        if self.table_editable and self.table_editable != 'disabled':
+            attributes = 'editable="%s"' % self.table_editable
         xml = ('<?xml version="1.0"?>\n'
-            '<tree>\n'
+            '<tree %s>\n'
             '%s'
-            '</tree>') % '\n'.join(fields)
+            '</tree>') % (attributes, '\n'.join(fields))
         return {
             'type': 'tree',
             'fields': fields,
@@ -1076,10 +1191,37 @@ class View(ModelSQL, ModelView):
             }
 
     def get_arch(self, name):
-        return getattr(self, 'get_arch_%s' % self.type)()
+        return self.get_view_info()['arch']
+        #return getattr(self, 'get_arch_%s' % self.type)()
 
     def get_view_info(self):
         return getattr(self, 'get_view_info_%s' % self.type)()
+
+    @classmethod
+    def update_table_views(cls, views):
+        TableView = Pool().get('shine.table.view')
+
+        to_delete = []
+        to_save = []
+        for view in views:
+            if (view.current_table_view and view.current_table_view.table ==
+                    view.sheet.current_table):
+                to_delete.append(view.current_table_view)
+            table_view = TableView()
+            table_view.table = view.current_table
+            table_view.system = view.system
+            view_info = view.get_view_info()
+            table_view.arch = view_info['arch']
+            table_view.type = view_info['type']
+            table_view
+            to_save.append(table_view)
+            view.current_table_view = table_view
+            view.save()
+
+        if to_delete:
+            TableView.delete(to_delete)
+        if to_save:
+            TableView.save(to_save)
 
 
 class ViewTableFormula(sequence_ordered(), ModelSQL, ModelView):
@@ -1091,153 +1233,3 @@ class ViewTableFormula(sequence_ordered(), ModelSQL, ModelView):
     formula = fields.Many2One('shine.formula', 'Formula', domain=[
             ('sheet', '=', Eval('_parent_view', {}).get('sheet')),
             ], required=True, ondelete='CASCADE')
-
-
-class Table(ModelSQL, ModelView):
-    'Shine Table'
-    __name__ = 'shine.table'
-    name = fields.Char('Name', required=True)
-    fields = fields.One2Many('shine.table.field', 'table',
-        'Fields')
-
-    @classmethod
-    def __setup__(cls):
-        super(Table, cls).__setup__()
-        cls._error_messages.update({
-                'copy_from_warning': ('Data from the The following fields will '
-                    'be lost because they no longer exist or their type has '
-                    'changed:\n\n'
-                    '%(fields)s\n\n'
-                    'Are you sure you want to copy data from '
-                    '"%(from_table)s" to "%(table)s"?')
-                })
-
-    def create_table(self):
-        TableHandler = backend.get('TableHandler')
-
-        model = ModelEmulation()
-        model.__doc__ = self.name
-        model._table = self.name
-
-        if TableHandler.table_exist(self.name):
-            TableHandler.drop_table('', self.name)
-
-        table = TableHandler(model)
-
-        for name, field in (('create_uid', fields.Integer),
-                ('write_uid', fields.Integer),
-                ('create_date', fields.Timestamp),
-                ('write_date', fields.Timestamp)):
-            sql_type = field._sql_type
-            table.add_column(name, sql_type)
-
-        for field in self.fields:
-            sql_type = FIELD_TYPE_SQL[field.type]
-            table.add_column(field.name, sql_type)
-        return table
-
-    def drop_table(self):
-        transaction = Transaction()
-        TableHandler = backend.get('TableHandler')
-        TableHandler.drop_table('', self.name, cascade=True)
-        transaction.database.sequence_delete(transaction.connection,
-            self.name + '_id_seq')
-
-    def copy_from(self, from_table):
-        fields = {x.name for x in self.fields}
-        from_fields = {x.name for x in from_table.fields}
-        missing = sorted(list(from_fields - fields))
-
-        existing = fields & from_fields
-        fields = {}
-        for field in self.fields:
-            if field.name in existing:
-                fields[field.name] = field.type
-
-        different_types = []
-        for field in from_table.fields:
-            if field.name in existing:
-                if (FIELD_TYPE_TRYTON[field.type] !=
-                        FIELD_TYPE_TRYTON[fields[field.name]]):
-                    different_types.append("%s (%s -> %s)" % (field.name,
-                            field.type, fields[field.name]))
-                    existing.remove(field.name)
-
-        if missing or different_types:
-            message = ['- %s' % x for x in (missing + different_types)]
-            self.raise_user_warning('shine_copy_from_warning.%s.%s' %
-                (self.name, from_table.id), 'copy_from_warning', {
-                'fields': '\n'.join(message),
-                'from_table': from_table.rec_name,
-                'table': self.rec_name,
-                })
-
-        if not existing:
-            return
-
-        existing = sorted(list(existing))
-        table = sql.Table(from_table.name)
-        subquery = table.select()
-        subquery.columns = [sql.Column(table, x) for x in existing]
-        table = sql.Table(self.name)
-        query = table.insert([sql.Column(table, x) for x in existing], subquery)
-
-        cursor = Transaction().connection.cursor()
-        cursor.execute(*query)
-
-    def count(self):
-        table = sql.Table(self.name)
-        cursor = Transaction().connection.cursor()
-        query = table.select(sql.aggregate.Count(1))
-        cursor.execute(*query)
-        return cursor.fetchone()[0]
-
-    @classmethod
-    def remove_old_tables(cls, days=0):
-        Sheet = Pool().get('shine.sheet')
-        current_table_ids = [x.current_table.id for x in Sheet.search([
-                    ('current_table', '!=', None)])]
-        tables = cls.search([
-                ('create_date', '<', datetime.now() -
-                    relativedelta.relativedelta(days=days)),
-                ('id', 'not in', current_table_ids),
-                ])
-        cls.delete(tables)
-
-    @classmethod
-    def delete(cls, tables):
-        for table in tables:
-            table.drop_table()
-        super(Table, cls).delete(tables)
-
-
-class TableField(ModelSQL, ModelView):
-    'Shine Table Field'
-    __name__ = 'shine.table.field'
-    table = fields.Many2One('shine.table', 'Table', required=True,
-        ondelete='CASCADE')
-    name = fields.Char('Name', required=True)
-    string = fields.Char('String', required=True)
-    type = fields.Selection([(None, '')] + FIELD_TYPE_SELECTION, 'Field Type',
-        required=False)
-    related_model = fields.Many2One('ir.model', 'Related Model')
-    formula = fields.Char('On Change With Formula')
-    inputs = fields.Function(fields.Char('On Change With Inputs'), 'get_inputs')
-
-    def get_inputs(self, name):
-        if not self.formula:
-            return
-        parser = formulas.Parser()
-        ast = parser.ast(self.formula)[1].compile()
-        return (' '.join([x for x in ast.inputs])).lower()
-
-    def get_ast(self):
-        parser = formulas.Parser()
-        ast = parser.ast(self.formula)[1].compile()
-        return ast
-
-
-class TableView(ModelSQL, ModelView):
-    'Shine Table View'
-    __name__ = 'shine.table.view'
-    arch = fields.Text('Arch')

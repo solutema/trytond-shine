@@ -1,0 +1,17 @@
+<form>
+    <label name="table"/>
+    <field name="table"/>
+    <newline/>
+    <label name="name"/>
+    <field name="name"/>
+    <label name="string"/>
+    <field name="string"/>
+    <label name="type"/>
+    <field name="type"/>
+    <label name="related_model"/>
+    <field name="related_model"/>
+    <label name="formula"/>
+    <field name="formula"/>
+    <label name="inputs"/>
+    <field name="inputs"/>
+</form>

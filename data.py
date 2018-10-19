@@ -2,11 +2,13 @@ import sql
 import formulas
 import schedula
 from trytond.model import ModelSQL, ModelView, fields
-from trytond.pool import Pool
+from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 from trytond.tools import cursor_dict
 from trytond.pyson import PYSONEncoder
 from .shine import FIELD_TYPE_TRYTON, FIELD_TYPE_CAST
+
+__all__ = ['ModelAccess', 'Data']
 
 
 class Adapter:
@@ -64,6 +66,26 @@ class Adapter:
             res[field.name] = obj
 
         return res
+
+
+class ModelAccess(metaclass=PoolMeta):
+    __name__ = 'ir.model.access'
+
+    @classmethod
+    def check_relation(cls, model_name, field_name, mode='read'):
+        '''
+        We must override check_relation and ensure that super() does not
+        execute:
+
+        getattr(Model, fieldname)
+
+        because the fields do not exist in the Model. If super() used
+        Model._fields[fieldname] we would not be forced to override the method.
+        '''
+        if model_name == 'shine.data':
+            return True
+        return super(ModelAccess, cls).check_relation(model_name, field_name,
+            mode)
 
 
 class Data(ModelSQL, ModelView):
@@ -133,102 +155,25 @@ class Data(ModelSQL, ModelView):
         return res
 
     @classmethod
-    def get_tree_view(cls, table, view):
-        fields = []
-        current_icon = None
-        for field in table.fields:
-            if field.type in ('datetime', 'timestamp'):
-                fields.append('<field name="%s" widget="date"/>\n' %
-                    field.name)
-                fields.append('<field name="%s" widget="time"/>\n' %
-                    field.name)
-                continue
-            if field.type == 'icon':
-                current_icon = field.name
-                continue
-
-
-            attributes = []
-            if field.type in ('integer', 'float', 'numeric'):
-                attributes.append('sum="Total %s"' % field.string)
-            if current_icon:
-                attributes.append('icon="%s"' % current_icon)
-                current_icon = None
-            if field.type == 'image':
-                attributes.append('widget="image"')
-
-            fields.append('<field name="%s" %s/>\n' % (field.name,
-                    ' '.join(attributes)))
-
-        xml = ('<?xml version="1.0"?>\n'
-            '<tree editable="bottom">\n'
-            '%s'
-            '</tree>') % '\n'.join(fields)
-        return fields, xml
-
-    @classmethod
-    def get_form_view(cls, table, view):
-        fields = []
-        for field in table.fields:
-            fields.append('<label name="%s"/>' % field.name)
-            if field.type in ('datetime', 'timestamp'):
-                fields.append('<group col="2">'
-                    '<field name="%s" widget="date"/>'
-                    '<field name="%s" widget="time"/>'
-                    '</group>' % (field.name, field.name))
-                continue
-            if field.type == 'icon':
-                fields.append('<field name="%s" icon="%s"/>\n' % (field.name,
-                        field.name))
-                continue
-
-            attributes = []
-            if field.type == 'image':
-                attributes.append('widget="image"')
-
-            fields.append('<field name="%s" %s/>\n' % (field.name,
-                    ' '.join(attributes)))
-
-        xml = ('<?xml version="1.0"?>\n'
-            '<form>\n'
-            '%s'
-            '</form>') % '\n'.join(fields)
-        return fields, xml
-
-    @classmethod
-    def get_from_view(cls, table, view):
-        return
-
-    @classmethod
     def fields_view_get(cls, view_id=None, view_type='form'):
-        #sheet = cls.get_sheet()
         table = cls.get_table()
-        view = cls.get_view()
-
-        #if view:
-            #fields, xml = cls.get_from_view(table, view)
-
-        #if sheet and sheet.type == 'singleton':
-            #view_type = 'form'
+        view = cls.get_table_view()
 
         if not view.id:
-            if view_type == 'tree':
-                fields, arch = cls.get_tree_view(table, view)
-            elif view_type == 'form':
-                fields, arch = cls.get_form_view(table, view)
-            children = None
-        else:
-            info = view.get_view_info()
-            view_type = info.get('type', view_type)
-            arch = info.get('arch')
-            children = info.get('children')
-            fields = info.get('fields')
+            for view in table.views:
+                if not view.system:
+                    continue
+                if view.type == view_type:
+                    break
+            assert(view.id)
+
         res = {
-            'type': view_type,
+            'type': view.type,
             'view_id': view_id,
-            'field_childs': children,
-            'arch': arch,
-            'fields': cls.fields_get(fields),
+            'field_childs': None,
+            'arch': view.arch,
+            # TODO: We should specify the exact fields required by the view
+            'fields': cls.fields_get(),
             }
         return res
 
@@ -341,7 +286,6 @@ class Data(ModelSQL, ModelView):
         if not has_formulas and formula_fields:
             cls.update_formulas(all_records)
 
-
     @classmethod
     def delete(cls, records):
         table = cls.get_sql_table()
@@ -350,6 +294,13 @@ class Data(ModelSQL, ModelView):
         if ids:
             query = table.delete(where=table.id.in_(ids))
             cursor.execute(*query)
+
+    @classmethod
+    def copy(cls, records, default=None):
+        records = cls.read([x.id for x in records if x.id])
+        for record in records:
+            del record['id']
+        return cls.create(records)
 
     @classmethod
     def get_sheet(cls):
@@ -365,6 +316,16 @@ class Data(ModelSQL, ModelView):
     def get_view(cls):
         View = Pool().get('shine.view')
         return View(Transaction().context.get('shine_view') or 0)
+
+    @classmethod
+    def get_table_view(cls):
+        TableView = Pool().get('shine.table.view')
+        table_view = Transaction().context.get('shine_table_view')
+        if not table_view:
+            view = cls.get_view()
+            if view.id:
+                table_view = view.current_table_view.id
+        return TableView(table_view)
 
     @classmethod
     def get_table(cls):
@@ -387,10 +348,3 @@ class Data(ModelSQL, ModelView):
         if table:
             return sql.Table(table.name)
         return super(Data, cls).__table__()
-
-    @classmethod
-    def copy(cls, records, default=None):
-        records = cls.read([x.id for x in records if x.id])
-        for record in records:
-            del record['id']
-        return cls.create(records)

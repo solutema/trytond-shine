@@ -215,7 +215,7 @@
         <record model="ir.action.act_window" id="act_open_view_form">
             <field name="name">Open View</field>
             <field name="res_model">shine.data</field>
-            <field name="context" eval="{'shine_view': Eval('active_id'), 'shine_table': Eval('current_table')}" pyson="1"/>
+            <field name="context" eval="{'shine_view': Eval('active_id'), 'shine_table_view': Eval('current_table_view'), 'shine_table': Eval('current_table')}" pyson="1"/>
         </record>
         <menuitem parent="menu_shine" sequence="40"
             action="act_view_form" id="menu_view"/>
@@ -267,19 +267,6 @@
             <field name="user" ref="user_remove_old_tables"/>
             <!-- TODO: Which group? -->
             <field name="group" ref="res.group_admin"/>
-        </record>
-
-        <record model="ir.cron" id="cron_remove_old_tables">
-            <field name="name">Remove Old Shine Tables</field>
-            <field name="request_user" ref="res.user_admin"/>
-            <field name="user" ref="user_remove_old_tables"/>
-            <field name="active" eval="True"/>
-            <field name="interval_number" eval="1"/>
-            <field name="interval_type">days</field>
-            <field name="number_calls" eval="-1"/>
-            <field name="repeat_missed" eval="False"/>
-            <field name="model">shine.table</field>
-            <field name="function">remove_old_tables</field>
         </record>
 
         <record model="ir.ui.icon" id="red_icon">

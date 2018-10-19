@@ -1,0 +1,6 @@
+<form>
+    <label name="name"/>
+    <field name="name"/>
+    <field name="fields" colspan="4"/>
+    <field name="views" colspan="4"/>
+</form>

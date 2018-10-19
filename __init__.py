@@ -4,6 +4,7 @@
 from trytond.pool import Pool
 from . import configuration
 from . import shine
+from . import table
 from . import data
 from . import tag
 from . import dashboard
@@ -18,9 +19,10 @@ def register():
         shine.Formula,
         shine.View,
         shine.ViewTableFormula,
-        shine.Table,
-        shine.TableField,
-        shine.TableView,
+        table.Table,
+        table.TableField,
+        table.TableView,
+        data.ModelAccess,
         data.Data,
         tag.Tag,
         tag.SheetTag,
