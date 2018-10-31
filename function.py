@@ -131,9 +131,16 @@ class Function(ModelSQL, ModelView):
     def get_rec_name(self, name):
         return '%s(%s)' % (self.name, self.parameters)
 
-    #@classmethod
-    #def search_rec_name(self, name, clause):
-        #return [
+    @classmethod
+    def search_rec_name(cls, name, clause):
+        if clause[1].startswith('!') or clause[1].startswith('not '):
+            bool_op = 'AND'
+        else:
+            bool_op = 'OR'
+        return [bool_op,
+            ('name',) + tuple(clause[1:]),
+            ('help',) + tuple(clause[1:]),
+            ]
 
     @classmethod
     def eval_context(cls):
