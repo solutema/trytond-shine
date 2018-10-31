@@ -3,7 +3,7 @@
 from decimal import Decimal
 import datetime
 import math
-#from simpleeval import simple_eval
+import formulas
 from dateutil.relativedelta import relativedelta
 from trytond.pool import Pool
 from trytond.transaction import Transaction
@@ -11,6 +11,47 @@ from trytond.model import ModelSQL, ModelView, fields
 
 __all__ = ['Function']
 
+
+def formulas_sheet(alias):
+    Sheet = Pool().get('shine.sheet')
+    sheets = Sheet.search([('alias', '=', alias)], limit=1)
+    if sheets:
+        return sheets[0]
+
+def formulas_sheet_records(alias):
+    Data = Pool().get('shine.data')
+
+    sheet = formulas_sheet(alias)
+    if not sheet:
+        return
+
+    if not sheet.current_table:
+        return
+
+    with Transaction().set_context({'shine_table': sheet.current_table.id}):
+        records = Data.search([])
+        if not records:
+            return
+        records = Data.read([x.id for x in records])
+    return records
+
+def formulas_sheet_value(alias, formula):
+    records = formulas_sheet_records(alias)
+    if not records:
+        return
+    record = records[0]
+    return record[formula]
+
+def formulas_sheet_values(alias, formula):
+    records = formulas_sheet_records(alias)
+    if not records:
+        return
+    return [x[formula] for x in records]
+
+
+FUNCTIONS = formulas.get_functions()
+FUNCTIONS['SHEET_VALUE'] = formulas_sheet_value
+FUNCTIONS['SHEET_VALUES'] = formulas_sheet_values
 
 def year(text):
     if not text:

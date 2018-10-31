@@ -13,6 +13,9 @@ from trytond.transaction import Transaction
 from trytond.tools import cursor_dict
 from trytond.config import config
 from .tag import TaggedMixin
+from . import function
+
+function
 
 __all__ = ['Sheet', 'DataSet', 'Formula', 'View', 'ViewTableFormula']
 
