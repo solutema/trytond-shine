@@ -1,10 +1,7 @@
 # The COPYRIGHT file at the top level of this repository contains the full
 # copyright notices and license terms.
-from decimal import Decimal
 import datetime
-import math
 import formulas
-from dateutil.relativedelta import relativedelta
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.model import ModelSQL, ModelView, fields
@@ -35,23 +32,18 @@ def formulas_sheet_records(alias):
         records = Data.read([x.id for x in records])
     return records
 
-def formulas_sheet_value(alias, formula):
+def sheet_value(alias, formula):
     records = formulas_sheet_records(alias)
     if not records:
         return
     record = records[0]
     return record[formula]
 
-def formulas_sheet_values(alias, formula):
+def sheet_values(alias, formula):
     records = formulas_sheet_records(alias)
     if not records:
         return
     return [x[formula] for x in records]
-
-
-FUNCTIONS = formulas.get_functions()
-FUNCTIONS['SHEET_VALUE'] = formulas_sheet_value
-FUNCTIONS['SHEET_VALUES'] = formulas_sheet_values
 
 def year(text):
     if not text:
@@ -94,65 +86,38 @@ def week(text):
     return datetime.datetime.strptime(year_month_day(text),
         '%Y-%m-%d').strftime('%W')
 
+def tryton_value(model, field):
+    Model = Pool().get(model)
+    records = Model.search([], limit=1)
+    if not records:
+        return
+    record, = records
+    try:
+        return getattr(record, field)
+    except AttributeError:
+        return
 
-def date(text):
-    if not text:
-        return None
-    return datetime.datetime.strptime(year_month_day(text), '%Y-%m-%d').date()
+def tryton_values(model, field):
+    Model = Pool().get(model)
+    records = Model.search([])
+    if not records:
+        return
+    try:
+        return [getattr(x, field) for x in records]
+    except AttributeError:
+        return
 
-def today():
-    return datetime.date.today()
-
-def now():
-    return datetime.datetime.now()
-
-
-def shine_eval(expression, obj, convert_none='empty'):
-    objects = {
-        # Tryton objects
-        'o': obj,
-        'Pool': Pool,
-        'Transaction': Transaction,
-        # Date Time methods
-        'y': year,
-        'm': month,
-        'd': day,
-        'w': week,
-        'ym': year_month,
-        'ymd': year_month_day,
-        'date': date,
-        'now': datetime.datetime.now,
-        'today': datetime.date.today,
-        'relativedelta': relativedelta,
-        # Conversion methods
-        'int': int,
-        'float': float,
-        'str': str,
-        # Aggregate methods
-        'sum': sum,
-        'min': min,
-        'max': max,
-        # Modules and objects
-        'math': math,
-        'Decimal': Decimal,
-        }
-    #value = simple_eval(expression, functions = objects)
-    value = eval(expression, objects)
-    if (value is False or value is None):
-        if convert_none == 'empty':
-            # TODO: Make translatable
-            value = '(empty)'
-        elif convert_none == 'zero':
-            value = '0'
-        else:
-            value = convert_none
-    return value
-
-def evaluate(code, context, return_var=None):
-    print('ABOUT TO EVAL: ', code, context)
-    exec(code)
-    if return_var:
-        return eval(return_var)
+FUNCTIONS = formulas.get_functions()
+FUNCTIONS['SHEET_VALUE'] = sheet_value
+FUNCTIONS['SHEET_VALUES'] = sheet_values
+FUNCTIONS['TRYTON_VALUE'] = tryton_value
+FUNCTIONS['TRYTON_VALUES'] = tryton_values
+FUNCTIONS['YEAR'] = year
+FUNCTIONS['YEAR_MONTH'] = year_month
+FUNCTIONS['YEAR_MONTH_DAY'] = year_month_day
+FUNCTIONS['MONTH'] = month
+FUNCTIONS['DAY'] = day
+FUNCTIONS['WEEK'] = week
 
 
 class Function(ModelSQL, ModelView):
