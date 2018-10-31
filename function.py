@@ -126,7 +126,6 @@ class Function(ModelSQL, ModelView):
     name = fields.Char('Name', required=True)
     parameters = fields.Char('Parameters')
     help = fields.Text('Help')
-    code = fields.Text('Code')
 
     def get_rec_name(self, name):
         return '%s(%s)' % (self.name, self.parameters)

@@ -4,106 +4,58 @@
 
         <!-- Date Time Functions -->
         <record model="shine.function" id="function_y">
-            <field name="name">y</field>
+            <field name="name">YEAR</field>
             <field name="parameters">date</field>
             <field name="help">Returns the year of the given parameter as a string</field>
-            <field name="code">year</field>
         </record>
         <record model="shine.function" id="function_m">
-            <field name="name">m</field>
+            <field name="name">MONTH</field>
             <field name="parameters">date</field>
             <field name="help">Returns the month of the given parameter as a string</field>
-            <field name="code">month</field>
         </record>
         <record model="shine.function" id="function_d">
-            <field name="name">d</field>
+            <field name="name">DAY</field>
             <field name="parameters">date</field>
             <field name="help">Returns the day of the given parameter as a string</field>
-            <field name="code">day</field>
         </record>
         <record model="shine.function" id="function_w">
-            <field name="name">w</field>
+            <field name="name">WEEK</field>
             <field name="parameters">date</field>
             <field name="help">Returns the week of the given parameter as a string</field>
-            <field name="code">week</field>
         </record>
         <record model="shine.function" id="function_ym">
-            <field name="name">ym</field>
+            <field name="name">YEAR_MONTH</field>
             <field name="parameters">date</field>
             <field name="help">Returns the year-month of the given parameter as a string</field>
-            <field name="code">year_month</field>
         </record>
         <record model="shine.function" id="function_ymd">
-            <field name="name">ymd</field>
+            <field name="name">YEAR_MONTH_DAY</field>
             <field name="parameters">date</field>
             <field name="help">Returns the year-month-day of given parameter as a string</field>
-            <field name="code">year_month_day</field>
-        </record>
-<!--
-        <record model="shine.function" id="function_date">
-            <field name="name">date</field>
-            <field name="parameters"></field>
-            <field name="help"></field>
-            <field name="code">date</field>
-        </record>
--->
-        <record model="shine.function" id="function_today">
-            <field name="name">today</field>
-            <field name="parameters"></field>
-            <field name="help">Returns the current date</field>
-            <field name="code">today</field>
-        </record>
-        <record model="shine.function" id="function_now">
-            <field name="name">now</field>
-            <field name="parameters"></field>
-            <field name="help">Returns the current date and time</field>
-            <field name="code">now</field>
-        </record>
-        <record model="shine.function" id="function_relativedelta">
-            <field name="name">relativedelta</field>
-            <field name="parameters"></field>
-            <field name="help">Returns an interval of time according to the given parameters</field>
-            <field name="code">relativedelta</field>
-        </record>
-
-        <!-- Conversion Functions -->
-        <record model="shine.function" id="function_int">
-            <field name="name">int</field>
-            <field name="parameters">value</field>
-            <field name="help">Convert the given parameter into an integer number</field>
-            <field name="code">relativedelta</field>
-        </record>
-        <record model="shine.function" id="function_float">
-            <field name="name">float</field>
-            <field name="parameters">value</field>
-            <field name="help">Convert the given parameter into a float number</field>
-            <field name="code">float</field>
-        </record>
-        <record model="shine.function" id="function_str">
-            <field name="name">str</field>
-            <field name="parameters">value</field>
-            <field name="help">Convert the given parameter into a string</field>
-            <field name="code">str</field>
         </record>
 
         <!-- Aggregate Functions -->
         <record model="shine.function" id="function_sum">
-            <field name="name">sum</field>
+            <field name="name">SUM</field>
             <field name="parameters">values</field>
             <field name="help">Adds all the values of the given paramter, which must be a list</field>
-            <field name="code">sum</field>
         </record>
         <record model="shine.function" id="function_min">
-            <field name="name">min</field>
+            <field name="name">MIN</field>
             <field name="parameters">values</field>
             <field name="help">Calculates the minimum value of all the values of the given paramter, which must be a list</field>
-            <field name="code">min</field>
         </record>
         <record model="shine.function" id="function_max">
-            <field name="name">max</field>
+            <field name="name">MAX</field>
             <field name="parameters">values</field>
             <field name="help">Calculates the maximum value of all the values of the given paramter, which must be a list</field>
-            <field name="code">max</field>
+        </record>
+
+        <!-- Logic Functions -->
+        <record model="shine.function" id="function_if">
+            <field name="name">IF</field>
+            <field name="parameters">condition, value_true, value_false</field>
+            <field name="help">Returns value_true if condition is true and returns value_false otherwise</field>
         </record>
     </data>
 </tryton>
