@@ -138,6 +138,7 @@ class Function(ModelSQL, ModelView):
             bool_op = 'OR'
         return [bool_op,
             ('name',) + tuple(clause[1:]),
+            ('parameters',) + tuple(clause[1:]),
             ('help',) + tuple(clause[1:]),
             ]
 
