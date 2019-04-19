@@ -32,7 +32,7 @@ FIELD_TYPES = [
     ('numeric', 'numeric', 'Numeric', 'fields.Numeric', 'NUMERIC', Decimal,
         None),
     ('boolean', 'boolean', 'Boolean', 'fields.Boolean', 'BOOLEAN', bool, None),
-    ('many2one', 'many2one', 'Many To One', 'fields.Many2One', 'INTEGER', int,
+    ('many2one', 'many2one', 'Link To Tryton', 'fields.Many2One', 'INTEGER', int,
         None),
     ('date', 'date', 'Date', 'fields.Date', 'DATE', date, None),
     ('datetime', 'datetime', 'Date Time', 'fields.DateTime', 'DATETIME',
