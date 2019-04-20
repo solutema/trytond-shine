@@ -165,7 +165,7 @@ class Data(ModelSQL, ModelView):
         table = cls.get_table()
         view = cls.get_table_view()
 
-        if not view.id:
+        if not view:
             for view in table.views:
                 if not view.system:
                     continue
@@ -315,23 +315,25 @@ class Data(ModelSQL, ModelView):
         if sheet_id:
             return Sheet(sheet_id)
         view = cls.get_view()
-        if view.id:
+        if view:
             return view.sheet
 
     @classmethod
     def get_view(cls):
         View = Pool().get('shine.view')
-        return View(Transaction().context.get('shine_view') or 0)
+        view_id = Transaction().context.get('shine_view')
+        if view_id:
+            return View(view_id)
 
     @classmethod
     def get_table_view(cls):
         TableView = Pool().get('shine.table.view')
-        table_view = Transaction().context.get('shine_table_view')
-        if not table_view:
-            view = cls.get_view()
-            if view.id:
-                table_view = view.current_table_view.id
-        return TableView(table_view)
+        table_view_id = Transaction().context.get('shine_table_view')
+        if table_view_id:
+            return TableView(table_view_id)
+        view = cls.get_view()
+        if view:
+            return view.current_table_view
 
     @classmethod
     def get_table(cls):
@@ -343,8 +345,8 @@ class Data(ModelSQL, ModelView):
                 table = sheet.current_table
         if not table:
             view = cls.get_view()
-            if view.id:
-                table = view.current_table.id
+            if view:
+                return view.current_table
         if table:
             return Table(table)
 
