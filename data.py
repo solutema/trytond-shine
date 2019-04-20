@@ -141,13 +141,14 @@ class Data(ModelSQL, ModelView):
         table = cls.get_table()
         for field in table.fields:
             res[field.name] = {
-                    'name': field.name,
-                    'string': field.string,
-                    'type': FIELD_TYPE_TRYTON[field.type],
-                    'relation': (field.related_model.model if
-                        field.related_model else None),
-                    'readonly': bool(field.formula),
-                    }
+                'name': field.name,
+                'string': field.string,
+                'type': FIELD_TYPE_TRYTON[field.type],
+                'relation': (field.related_model.model if
+                    field.related_model else None),
+                'readonly': bool(field.formula),
+                'help': None,
+                }
             if field.inputs:
                 res[field.name]['on_change_with'] = field.inputs.split()
             if field.type == 'reference':
