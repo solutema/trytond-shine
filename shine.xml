@@ -1,6 +1,10 @@
 <tryton>
     <data>
-	    <menuitem sequence="100" name="Shine" id="menu_shine"/>
+        <record model="ir.ui.icon" id="shine_icon">
+            <field name="name">table_chart</field>
+            <field name="path">icons/table_chart.svg</field>
+        </record>
+        <menuitem sequence="100" name="Shine" id="menu_shine" icon="table_chart"/>
 
         <record model="ir.ui.view" id="sheet_view_tree">
             <field name="model">shine.sheet</field>
