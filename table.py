@@ -135,6 +135,7 @@ class TableField(ModelSQL, ModelView):
     string = fields.Char('String', required=True)
     type = fields.Selection([(None, '')] + FIELD_TYPE_SELECTION, 'Field Type',
         required=False)
+    help = fields.Text('Help')
     related_model = fields.Many2One('ir.model', 'Related Model')
     formula = fields.Char('On Change With Formula')
     inputs = fields.Function(fields.Char('On Change With Inputs'), 'get_inputs')

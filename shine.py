@@ -260,6 +260,7 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                         name=formula.alias,
                         string=formula.name,
                         type=formula.type,
+                        help=formula.expression,
                         related_model=formula.related_model,
                         formula=(formula.expression if formula.expression and
                             formula.expression.startswith('=') else None),

@@ -152,7 +152,7 @@ class Data(ModelSQL, ModelView):
                 'relation': (field.related_model.model if
                     field.related_model else None),
                 'readonly': bool(field.formula),
-                'help': None,
+                'help': field.help,
                 }
             if field.inputs:
                 res[field.name]['on_change_with'] = field.inputs.split()

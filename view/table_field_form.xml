@@ -14,4 +14,6 @@
     <field name="formula"/>
     <label name="inputs"/>
     <field name="inputs"/>
+    <separator name="help" colspan="4"/>
+    <field name="help" colspan="4"/>
 </form>
