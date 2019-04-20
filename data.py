@@ -99,6 +99,11 @@ class Data(ModelSQL, ModelView):
         cls._fields = Adapter()
 
     @classmethod
+    def __setup__(cls):
+        super(Data, cls).__setup__()
+        cls.__rpc__['fields_view_get'].cache = None
+
+    @classmethod
     def __table__(cls):
         # TODO: Check if we can drop create(), read(), write(), delete() &
         # search()
