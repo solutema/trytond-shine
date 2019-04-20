@@ -6,6 +6,8 @@ from trytond import model
 from trytond import backend
 from trytond.transaction import Transaction
 from trytond.pool import Pool
+from trytond.i18n import gettext
+from trytond.exceptions import UserWarning
 from .shine import FIELD_TYPE_SQL, FIELD_TYPE_TRYTON, FIELD_TYPE_SELECTION
 
 __all__ = ['Table', 'TableField', 'TableView']
@@ -23,18 +25,6 @@ class Table(model.ModelSQL, model.ModelView):
     name = model.fields.Char('Name', required=True)
     fields = model.fields.One2Many('shine.table.field', 'table', 'Fields')
     views = model.fields.One2Many('shine.table.view', 'table', 'Views')
-
-    @classmethod
-    def __setup__(cls):
-        super(Table, cls).__setup__()
-        cls._error_messages.update({
-                'copy_from_warning': ('Data from the The following fields will '
-                    'be lost because they no longer exist or their type has '
-                    'changed:\n\n'
-                    '%(fields)s\n\n'
-                    'Are you sure you want to copy data from '
-                    '"%(from_table)s" to "%(table)s"?')
-                })
 
     def create_table(self):
         TableHandler = backend.get('TableHandler')
@@ -89,12 +79,10 @@ class Table(model.ModelSQL, model.ModelView):
 
         if missing or different_types:
             message = ['- %s' % x for x in (missing + different_types)]
-            self.raise_user_warning('shine_copy_from_warning.%s.%s' %
-                (self.name, from_table.id), 'copy_from_warning', {
-                'fields': '\n'.join(message),
-                'from_table': from_table.rec_name,
-                'table': self.rec_name,
-                })
+            raise UserWarning(
+                'shine_copy_from_warning.%s.%s' % (self.name, from_table.id),
+                gettext('shine.copy_from_warning', fields='\n'.join(message),
+                    from_table=from_table.rec_name, table=self.rec_name))
 
         if not existing:
             return

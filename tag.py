@@ -1,21 +1,13 @@
 from trytond.model import ModelSQL, ModelView, fields, tree
 from trytond.pyson import Eval
 from trytond.pool import Pool
+from trytond.i18n import gettext
+from trytond.exceptions import UserError
 
 __all__ = ['Tag', 'SheetTag']
 
 
 class TaggedMixin(object):
-    @classmethod
-    def __setup__(cls):
-        super(TaggedMixin, cls).__setup__()
-        cls._error_messages.update({
-                'missing_tags': ('Missing tags required for parent "%(tag)s" '
-                    'in "%(record)s".'),
-                'repeated_tags': ('You cannot have more than one tag of '
-                    '"%(tag)s" in "%(record)s".'),
-                })
-
     @classmethod
     def validate(cls, sheets):
         cls.check_tags(sheets)
@@ -52,18 +44,13 @@ class TaggedMixin(object):
             sheet_tag_ids = {x.id for x in sheet.tags}
             for view, children in required_children.items():
                 if not (sheet_tag_ids & children):
-                    cls.raise_user_error('missing_tags', {
-                            'record': sheet.rec_name,
-                            'tag': view.rec_name,
-                            })
+                    raise UserError(gettext('shine.missing_tags',
+                        record=sheet.rec_name, tag=view.rec_name))
 
             for view, children in unique_children.items():
                 if len(sheet_tag_ids & children) > 1:
-                    cls.raise_user_error('repeated_tags', {
-                            'record': sheet.rec_name,
-                            'tag': view.rec_name,
-                            })
-
+                    raise UserError(gettext('shine.repeated_tags',
+                        record=sheet.rec_name, tag=view.rec_name))
 
 
 class Tag(tree(separator=' / '), ModelSQL, ModelView):

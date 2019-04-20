@@ -12,6 +12,8 @@ from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.tools import cursor_dict
 from trytond.config import config
+from trytond.i18n import gettext
+from trytond.exceptions import UserError
 from .tag import TaggedMixin
 from . import function
 
@@ -217,15 +219,6 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                         ~Bool(Eval('dataset'))),
                     },
                 })
-        cls._error_messages.update({
-                'consecutive_icons': ('There cannot be two consecutive '
-                    'fields of Icon type in sheet "%s".'),
-                'last_icon': ('The last formula cannot be of type Icon in '
-                    'sheet "%s".'),
-                'invalid_formula': ('Invalid formula "%(formula)s" in Sheet '
-                    '"%(sheet)s".'),
-                'no_formulas': 'Sheet "%s" has no formulas.',
-                })
 
     @fields.depends('name', 'alias')
     def on_change_name(self):
@@ -373,25 +366,23 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
                 any_formula = True
             icon = formula.expression_icon
             if icon and icon != 'green':
-                self.raise_user_error('invalid_formula', {
-                        'sheet': self.rec_name,
-                        'formula': formula.rec_name,
-                        })
+                raise UserError(gettext('shine.invalid_formula',
+                        sheet=self.rec_name, formula=formula.rec_name))
         if not any_formula:
-            self.raise_user_error('no_formulas', self.rec_name)
+            raise UserError(gettext('shine.no_formulas', sheet=self.rec_name))
 
     def check_icons(self):
         was_icon = False
         for formula in self.formulas:
             if formula.type == 'icon':
                 if was_icon:
-                    self.raise_user_error('consecutive_icons',
-                        self.rec_name)
+                    raise UserError(gettext('shine.consecutive_icons',
+                        sheet=self.rec_name))
                 was_icon = True
             else:
                 was_icon = False
         if was_icon:
-            self.raise_user_error('last_icon', self.rec_name)
+            raise UserError(gettext('shine.last_icon', sheet=self.rec_name))
 
     @classmethod
     @ModelView.button
@@ -591,16 +582,6 @@ class DataSet(ModelSQL, ModelView):
             self.model_domain = self.model_view_search.domain
 
     @classmethod
-    def __setup__(cls):
-        super(DataSet, cls).__setup__()
-        cls._error_messages.update({
-                'invalid_domain': ('Invalid domain "%(domain)s" on Data Set '
-                    '"%(dataset)s".'),
-                'invalid_context': ('Invalid context "%(context)s" on Data Set '
-                    '"%(dataset)s".'),
-                })
-
-    @classmethod
     def validate(cls, datasets):
         for dataset in datasets:
             dataset.check_domain()
@@ -612,29 +593,21 @@ class DataSet(ModelSQL, ModelView):
         try:
             value = PYSONDecoder().decode(self.model_domain)
         except Exception:
-            self.raise_user_error('invalid_domain', {
-                    'domain': self.model_domain,
-                    'dataset': self.rec_name,
-                    })
+            raise UserError(gettext('shine.invalid_domain',
+                    domain=self.model_domain, dataset=self.rec_name))
         if isinstance(value, PYSON):
             if not value.types() == set([list]):
-                self.raise_user_error('invalid_domain', {
-                        'domain': self.model_domain,
-                        'dataset': self.rec_name,
-                        })
+                raise UserError(gettext('shine.invalid_domain',
+                        domain=self.model_domain, dataset=self.rec_name))
         elif not isinstance(value, list):
-            self.raise_user_error('invalid_domain', {
-                    'domain': self.model_domain,
-                    'dataset': self.rec_name,
-                    })
+            raise UserError(gettext('shine.invalid_domain',
+                    domain=self.model_domain, dataset=self.rec_name))
         else:
             try:
                 fields.domain_validate(value)
             except Exception:
-                self.raise_user_error('invalid_domain', {
-                        'domain': self.model_domain,
-                        'dataset': self.rec_name,
-                        })
+                raise UserError(gettext('shine.invalid_domain',
+                    domain=self.model_domain, dataset=self.rec_name))
 
     def check_context(self):
         if not self.model_context:
@@ -642,29 +615,21 @@ class DataSet(ModelSQL, ModelView):
         try:
             value = PYSONDecoder().decode(self.model_context)
         except Exception:
-            self.raise_user_error('invalid_context', {
-                    'context': self.model_context,
-                    'dataset': self.rec_name,
-                    })
+            raise UserError(gettext('shine.invalid_context',
+                context=self.model_context, dataset=self.rec_name))
         if isinstance(value, PYSON):
             if not value.types() == set([dict]):
-                self.raise_user_error('invalid_context', {
-                        'context': self.model_context,
-                        'dataset': self.rec_name,
-                        })
+                raise UserError(gettext('shine.invalid_context',
+                    context=self.model_context, dataset=self.rec_name))
         elif not isinstance(value, dict):
-            self.raise_user_error('invalid_context', {
-                    'context': self.model_context,
-                    'dataset': self.rec_name,
-                    })
+            raise UserError(gettext('shine.invalid_context',
+                context=self.model_context, dataset=self.rec_name))
         else:
             try:
                 fields.context_validate(value)
             except Exception:
-                self.raise_user_error('invalid_context', {
-                        'context': self.model_context,
-                        'dataset': self.rec_name,
-                        })
+                raise UserError(gettext('shine.invalid_context',
+                    context=self.model_context, dataset=self.rec_name))
 
     def get_fields_model(self):
         res = []
@@ -806,12 +771,6 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
             ('sheet_alias_uniq', Unique(t, t.sheet, sql.Column(t, 'alias')),
                 'There cannot be two formulas with the same alias in a sheet.')
             ]
-        cls._error_messages.update({
-                'invalid_alias': ('Invalid symbol "%(symbol)s" in formula '
-                    '"%(name)s".'),
-                'invalid_store': ('Formula "%s" cannot be stored because type '
-                    'is not set.'),
-                })
 
     @classmethod
     def validate(cls, formulas):
@@ -822,14 +781,13 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     def check_alias(self):
         for symbol in self.alias:
             if not symbol in VALID_SYMBOLS:
-                self.raise_user_error('invalid_alias', {
-                        'symbol': symbol,
-                        'name': self.name,
-                        })
+                raise UserError(gettext('shine.invalid_alias', symbol=symbol,
+                    name=self.name))
 
     def check_store(self):
         if not self.type and self.store:
-            self.raise_user_error('invalid_store', self.rec_name)
+            raise UserError(gettext('shine.invalid_store',
+                    formula=self.rec_name))
 
     @fields.depends('type')
     def on_change_with_store(self):

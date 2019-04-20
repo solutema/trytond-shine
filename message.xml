@@ -1,0 +1,37 @@
+<tryton>
+    <data group="1">
+        <record model="ir.message" id="consecutive_icons">
+            <field name="text">There cannot be two consecutive fields of Icon type in sheet "%(sheet)s".</field>
+        </record>
+        <record model="ir.message" id="last_icon">
+            <field name="text">The last formula cannot be of type Icon in sheet "%(sheet)s".</field>
+        </record>
+        <record model="ir.message" id="invalid_formula">
+            <field name="text">Invalid formula "%(formula)s" in Sheet "%(sheet)s".</field>
+        </record>
+        <record model="ir.message" id="no_formulas">
+            <field name="text">Sheet "%(sheet)s" has no formulas.</field>
+        </record>
+        <record model="ir.message" id="invalid_domain">
+            <field name="text">Invalid domain "%(domain)s" on Data Set "%(dataset)s".</field>
+        </record>
+        <record model="ir.message" id="invalid_context">
+            <field name="text">Invalid context "%(context)s" on Data Set "%(dataset)s".</field>
+        </record>
+        <record model="ir.message" id="invalid_alias">
+            <field name="text">Invalid symbol "%(symbol)s" in formula "%(name)s".</field>
+        </record>
+        <record model="ir.message" id="invalid_store">
+            <field name="text">Formula "%(formula)s" cannot be stored because type is not set.</field>
+        </record>
+        <record model="ir.message" id="copy_from_warning">
+            <field name="text">Data from the following fields will be lost because they no longer exist or their type has changed:\n\n%(fields)s\n\nAre you sure you want to copy data from %(from_table)s to "%(table)s"?</field>
+        </record>
+        <record model="ir.message" id="missing_tags">
+            <field name="text">Missing tags required for parent "%(tag)s" in "%(record)s".</field>
+        </record>
+        <record model="ir.message" id="repeated_tags">
+            <field name="text">You cannot have more than one tag of "%(tag)s" in "%(record)s".</field>
+        </record>
+    </data>
+</tryton>
