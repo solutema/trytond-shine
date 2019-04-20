@@ -3,6 +3,7 @@
 # the full copyright notices and license terms.
 from trytond.pool import Pool
 from . import configuration
+from . import ir
 from . import shine
 from . import table
 from . import data
@@ -13,6 +14,7 @@ from . import function
 def register():
     Pool.register(
         configuration.Configuration,
+        ir.Cron,
         function.Function,
         shine.Sheet,
         shine.DataSet,
