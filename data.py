@@ -102,6 +102,7 @@ class Data(ModelSQL, ModelView):
     def __setup__(cls):
         super(Data, cls).__setup__()
         cls.__rpc__['fields_view_get'].cache = None
+        cls.__rpc__['default_get'].cache = None
 
     @classmethod
     def __table__(cls):
@@ -111,7 +112,21 @@ class Data(ModelSQL, ModelView):
 
     @classmethod
     def default_get(cls, fields_names, with_rec_name=True):
-        return {}
+        table = cls.get_table()
+
+        if not table.singleton:
+            return {}
+        default = {}
+        singleton = cls.get_singleton()
+        if singleton:
+            if with_rec_name:
+                fields_names = fields_names[:]
+                for field in fields_names[:]:
+                    if cls._fields[field]._type in ('many2one',):
+                        fields_names.append(field + '.rec_name')
+            default, = cls.read([singleton.id], fields_names=fields_names)
+            del default['id']
+        return default
 
     def on_change_with(self, fieldnames):
         table = self.get_table()
@@ -236,8 +251,15 @@ class Data(ModelSQL, ModelView):
 
     @classmethod
     def create(cls, vlist):
-        table = cls.get_sql_table()
+        table = cls.get_table()
+        if table.singleton:
+            assert len(vlist) == 1
+            singleton = cls.get_singleton()
+            if singleton:
+                cls.write([singleton], vlist[0])
+                return [singleton]
 
+        sql_table = cls.get_sql_table()
 
         cursor = Transaction().connection.cursor()
         ids = []
@@ -245,10 +267,11 @@ class Data(ModelSQL, ModelView):
             fields = []
             values = []
             for key, value in record.items():
-                fields.append(sql.Column(table, key))
+                fields.append(sql.Column(sql_table, key))
                 values.append(value)
 
-            query = table.insert(fields, values=[values], returning=[table.id])
+            query = sql_table.insert(fields, values=[values],
+                returning=[sql_table.id])
             cursor.execute(*query)
             ids.append(cursor.fetchone()[0])
         records = cls.browse(ids)
@@ -299,11 +322,17 @@ class Data(ModelSQL, ModelView):
 
     @classmethod
     def delete(cls, records):
-        table = cls.get_sql_table()
+        table = cls.get_table()
+        if table.singleton:
+            singleton = cls.get_singleton()
+            if singleton:
+                records = [singleton]
+
+        sql_table = cls.get_sql_table()
         cursor = Transaction().connection.cursor()
         ids = [x.id for x in records if x.id > 0]
         if ids:
-            query = table.delete(where=table.id.in_(ids))
+            query = sql_table.delete(where=sql_table.id.in_(ids))
             cursor.execute(*query)
 
     @classmethod
@@ -312,6 +341,16 @@ class Data(ModelSQL, ModelView):
         for record in records:
             del record['id']
         return cls.create(records)
+
+    @classmethod
+    def get_singleton(cls):
+        # From modelsingleton.py
+        '''
+        Return the instance of the unique record if there is one.
+        '''
+        singletons = cls.search([], limit=1)
+        if singletons:
+            return singletons[0]
 
     @classmethod
     def get_sheet(cls):

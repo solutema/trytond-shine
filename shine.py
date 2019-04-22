@@ -252,6 +252,7 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
             sheet.revision += 1
             table = Table()
             table.name = sheet.data_table_name
+            table.singleton = (sheet.type == 'singleton')
             fields = []
             for formula in sheet.formulas:
                 if not formula.type:

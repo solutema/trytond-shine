@@ -23,6 +23,7 @@ class Table(model.ModelSQL, model.ModelView):
     'Shine Table'
     __name__ = 'shine.table'
     name = model.fields.Char('Name', required=True)
+    singleton = model.fields.Boolean('Singleton')
     fields = model.fields.One2Many('shine.table.field', 'table', 'Fields')
     views = model.fields.One2Many('shine.table.view', 'table', 'Views')
 
