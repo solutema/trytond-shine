@@ -300,13 +300,7 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
             if sheet.type == 'sheet':
                 to_save.append(sheet.get_default_list_view())
             to_save.append(sheet.get_default_form_view())
-
         View.save(to_save)
-
-        to_update = []
-        for sheet in sheets:
-            to_update += sheet.views
-        View.update_table_views(View.browse([x.id for x in to_update]))
 
     def get_default_list_view(self):
         pool = Pool()
@@ -1032,6 +1026,9 @@ class View(ModelSQL, ModelView):
     @classmethod
     def write(cls, *args):
         super(View, cls).write(*args)
+        prevent = Transaction().context.get('shine_prevent_view_updates')
+        if prevent:
+            return
         actions = iter(args)
         actions_to_update = []
         table_views_to_update = []
@@ -1053,6 +1050,7 @@ class View(ModelSQL, ModelView):
     def update_actions(cls, views):
         ActWindow = Pool().get('ir.action.act_window')
 
+        to_write = []
         for view in views:
             action = view.action
             if not action:
@@ -1068,9 +1066,16 @@ class View(ModelSQL, ModelView):
                     })
             action.save()
             if not view.action:
-                # TODO: Saving the view will call update_actions() again
-                view.action = action
-                view.save()
+                to_write.append([view])
+                to_write.append({
+                        'action': action.id,
+                        })
+        if to_write:
+            with Transaction().set_context({
+                        'shine_prevent_view_updates': True,
+                        }):
+                cls.write(*to_write)
+
 
     @classmethod
     def delete_actions(cls, views):
@@ -1085,25 +1090,33 @@ class View(ModelSQL, ModelView):
 
         to_delete = []
         to_save = []
+        to_write = []
         for view in views:
-            if (view.current_table_view and view.current_table_view.table ==
-                    view.sheet.current_table):
-                to_delete.append(view.current_table_view)
+            if view.current_table:
+                to_delete += TableView.search([
+                        ('table', '=', view.current_table),
+                        ])
             table_view = TableView()
             table_view.table = view.current_table
             table_view.system = view.system
             view_info = view.get_view_info()
             table_view.arch = view_info['arch']
             table_view.type = view_info['type']
-            table_view
             to_save.append(table_view)
-            view.current_table_view = table_view
-            view.save()
+            to_write.append([view])
+            to_write.append({
+                    'current_table_view': table_view.id,
+                    })
 
         if to_delete:
             TableView.delete(to_delete)
         if to_save:
             TableView.save(to_save)
+        if to_write:
+            with Transaction().set_context({
+                        'shine_prevent_view_updates': True,
+                        }):
+                cls.write(*to_write)
 
     def get_view_info_table(self):
         # TODO: Duplicated from get_tree_view() but this one is not editable
