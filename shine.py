@@ -159,7 +159,9 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
     current_table = fields.Many2One('shine.table', 'Table', readonly=True)
     python_code = fields.Function(fields.Text('Python Code'), 'get_python_code')
     quick_edition = fields.Selection(SELECTION_EDITABLE,
-        'Quick Edition', required=True, sort=False,
+        'Quick Edition', required=True, sort=False, states={
+            'readonly': Eval('state') != 'draft',
+            },
         help='"Bottom" adds new records at the bottom of the list.\n'
         '"Top" adds new records at the top of the list.')
 
