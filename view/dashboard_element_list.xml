@@ -1,4 +1,4 @@
-<tree editable="bottom" sequence="sequence">
+<tree editable="1" sequence="sequence">
     <field name="dashboard"/>
     <field name="alias"/>
     <field name="view"/>

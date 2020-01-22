@@ -1,4 +1,4 @@
-<tree editable="bottom">
+<tree editable="1">
     <field name="dashboard"/>
     <field name="column1"/>
     <field name="column2"/>

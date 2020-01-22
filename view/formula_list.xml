@@ -1,4 +1,4 @@
-<tree editable="bottom" sequence="sequence">
+<tree editable="1" sequence="sequence">
     <field name="sheet"/>
     <field name="name"/>
     <field name="alias"/>
