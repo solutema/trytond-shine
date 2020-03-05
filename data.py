@@ -6,6 +6,8 @@ from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 from trytond.tools import cursor_dict
 from trytond.pyson import PYSONEncoder
+from trytond.i18n import gettext
+from trytond.exceptions import UserError
 from .shine import FIELD_TYPE_TRYTON, FIELD_TYPE_CAST
 
 __all__ = ['ModelAccess', 'Data']
@@ -140,7 +142,8 @@ class Data(ModelSQL, ModelView):
             try:
                 value = ast(*inputs)
             except schedula.utils.exc.DispatcherError as e:
-                self.raise_user_error(e.args[0] % e.args[1:])
+                raise UserError(gettext('shine.msg_service_message',
+                    message=e.args[0] % e.args[1:]))
 
             if isinstance(value, list):
                 value = str(value)
