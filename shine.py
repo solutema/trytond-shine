@@ -124,7 +124,7 @@ class TimeoutChecker:
 SHEET_STATES = [
     ('draft', 'Draft'),
     ('active', 'Active'),
-    ('canceled', 'Canceled'),
+    ('cancelled', "Cancelled"),
     ]
 
 class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
@@ -188,14 +188,26 @@ class Sheet(TaggedMixin, Workflow, ModelSQL, ModelView):
         return Config(0).default_timeout
 
     @classmethod
+    def __register__(cls, module_name):
+        cursor = Transaction().connection.cursor()
+        sql_table = cls.__table__()
+
+        super(Sheet, cls).__register__(module_name)
+
+        # Migration from 5.6: rename state canceled to cancelled
+        cursor.execute(*sql_table.update(
+                [sql_table.state], ['cancelled'],
+                where=sql_table.state == 'canceled'))
+
+    @classmethod
     def __setup__(cls):
         super(Sheet, cls).__setup__()
         cls._transitions |= set((
                 ('draft', 'active'),
-                ('draft', 'canceled'),
+                ('draft', 'cancelled'),
                 ('active', 'draft'),
-                ('active', 'canceled'),
-                ('canceled', 'draft'),
+                ('active', 'cancelled'),
+                ('cancelled', 'draft'),
                 ))
         cls._buttons.update({
                 'activate': {
@@ -761,6 +773,18 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
     @staticmethod
     def default_store():
         return True
+
+    @classmethod
+    def __register__(cls, module_name):
+        cursor = Transaction().connection.cursor()
+        sql_table = cls.__table__()
+
+        super(Formula, cls).__register__(module_name)
+
+        # Migration from 5.6: rename state canceled to cancelled
+        cursor.execute(*sql_table.update(
+                [sql_table.state], ['cancelled'],
+                where=sql_table.state == 'canceled'))
 
     @classmethod
     def __setup__(cls):
