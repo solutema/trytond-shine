@@ -775,18 +775,6 @@ class Formula(sequence_ordered(), ModelSQL, ModelView):
         return True
 
     @classmethod
-    def __register__(cls, module_name):
-        cursor = Transaction().connection.cursor()
-        sql_table = cls.__table__()
-
-        super(Formula, cls).__register__(module_name)
-
-        # Migration from 5.6: rename state canceled to cancelled
-        cursor.execute(*sql_table.update(
-                [sql_table.state], ['cancelled'],
-                where=sql_table.state == 'canceled'))
-
-    @classmethod
     def __setup__(cls):
         super(Formula, cls).__setup__()
         t = cls.__table__()
