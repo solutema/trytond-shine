@@ -1181,7 +1181,7 @@ class View(ModelSQL, ModelView):
         y = '<field name="%s" %s/>\n' % (self.chart_value.alias, attributes)
 
         xml = ('<?xml version="1.0"?>\n'
-            '<graph type="%(type)s" legend="%(legend)s">\n'
+            '<graph type="%(type)s" legend="%(legend)s" %(attributes)s>\n'
             '    <x>'
             '        %(x)s'
             '    </x>'
@@ -1190,7 +1190,7 @@ class View(ModelSQL, ModelView):
             '    </y>'
             '</graph>') % {
                 'type': self.chart_type,
-                '': self.chart_interpolation,
+                'attributes': self.chart_interpolation,
                 'legend': self.chart_legend and '1' or '0',
                 'x': x,
                 'y': y,
