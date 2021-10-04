@@ -8,6 +8,8 @@ __all__ = ['Tag', 'SheetTag']
 
 
 class TaggedMixin(object):
+    __slots__ = ()
+
     @classmethod
     def validate(cls, sheets):
         cls.check_tags(sheets)
