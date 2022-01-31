@@ -1229,4 +1229,4 @@ class ViewTableFormula(sequence_ordered(), ModelSQL, ModelView):
         ondelete='CASCADE')
     formula = fields.Many2One('shine.formula', 'Formula', domain=[
             ('sheet', '=', Eval('_parent_view', {}).get('sheet')),
-            ], required=True, ondelete='CASCADE')
+            ], required=True, ondelete='CASCADE', depends=['view'])
