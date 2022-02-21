@@ -28,16 +28,15 @@ class Table(model.ModelSQL, model.ModelView):
     views = model.fields.One2Many('shine.table.view', 'table', 'Views')
 
     def create_table(self):
-        TableHandler = backend.get('TableHandler')
-
         model = ModelEmulation()
         model.__doc__ = self.name
         model._table = self.name
 
-        if TableHandler.table_exist(self.name):
-            TableHandler.drop_table('', self.name)
+        exist = backend.TableHandler.table_exist(self.name)
+        if exist:
+            backend.TableHandler.drop_table('', self.name)
 
-        table = TableHandler(model)
+        table = backend.TableHandler(model, 'shine')
 
         for name, field in (('create_uid', fields.Integer),
                 ('write_uid', fields.Integer),
@@ -53,8 +52,7 @@ class Table(model.ModelSQL, model.ModelView):
 
     def drop_table(self):
         transaction = Transaction()
-        TableHandler = backend.get('TableHandler')
-        TableHandler.drop_table('', self.name, cascade=True)
+        backend.TableHandler.drop_table('', self.name, cascade=True)
         transaction.database.sequence_delete(transaction.connection,
             self.name + '_id_seq')
 
