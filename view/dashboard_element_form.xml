@@ -1,0 +1,19 @@
+<form>
+    <label name="dashboard"/>
+    <field name="dashboard"/>
+    <newline/>
+    <label name="alias"/>
+    <field name="alias"/>
+    <label name="view"/>
+    <field name="view"/>
+    <label name="left"/>
+    <field name="left"/>
+    <label name="right"/>
+    <field name="right"/>
+    <label name="top"/>
+    <field name="top"/>
+    <label name="bottom"/>
+    <field name="bottom"/>
+    <label name="sequence"/>
+    <field name="sequence"/>
+</form>

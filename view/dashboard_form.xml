@@ -1,0 +1,8 @@
+<form>
+    <label name="name"/>
+    <field name="name"/>
+    <label name="responsive"/>
+    <field name="responsive"/>
+    <field name="elements" colspan="4"/>
+    <field name="mockup" colspan="4"/>
+</form>

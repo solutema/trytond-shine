@@ -1,0 +1,5 @@
+<data>
+    <xpath expr="/form/field[@name='act_window']" position="replace_attributes">
+        <field name="act_window" widget="many2one"/>
+    </xpath>
+</data>
