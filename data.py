@@ -184,7 +184,7 @@ class Data(ModelSQL, ModelView):
         return res
 
     @classmethod
-    def fields_view_get(cls, view_id=None, view_type='form'):
+    def fields_view_get(cls, view_id=None, view_type='form', level=None):
         table = cls.get_table()
         view = cls.get_table_view()
 
