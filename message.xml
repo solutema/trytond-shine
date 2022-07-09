@@ -25,7 +25,11 @@
             <field name="text">Formula "%(formula)s" cannot be stored because type is not set.</field>
         </record>
         <record model="ir.message" id="copy_from_warning">
-            <field name="text">Data from the following fields will be lost because they no longer exist or their type has changed:\n\n%(fields)s\n\nAre you sure you want to copy data from %(from_table)s to "%(table)s"?</field>
+            <field name="text">Data from the following fields will be lost because they no longer exist or their type has changed:
+
+%(fields)s
+
+Are you sure you want to copy data from %(from_table)s to "%(table)s"?</field>
         </record>
         <record model="ir.message" id="missing_tags">
             <field name="text">Missing tags required for parent "%(tag)s" in "%(record)s".</field>
