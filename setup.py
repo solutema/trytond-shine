@@ -39,8 +39,7 @@ major_version = int(major_version)
 minor_version = int(minor_version)
 name = 'trytond_shine'
 
-download_url = 'https://github.com/solutema/trytond-shine' % (
-    major_version, minor_version)
+download_url = 'https://github.com/solutema/trytond-shine'
 
 requires = ['formula']
 
