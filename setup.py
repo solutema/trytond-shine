@@ -3,23 +3,19 @@
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
 
-from setuptools import setup
-import re
-import os
 import io
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser
-
-MODULE2PREFIX = {}
-
+import os
+import re
+from configparser import ConfigParser
+from setuptools import setup, find_packages
 
 def read(fname):
-    return io.open(
+    content = io.open(
         os.path.join(os.path.dirname(__file__), fname),
         'r', encoding='utf-8').read()
-
+    content = re.sub(
+        r'(?m)^\.\. toctree::\r?\n((^$|^\s.*$)\r?\n)*', '', content)
+    return content
 
 def get_require_version(name):
     if minor_version % 2:
@@ -29,6 +25,7 @@ def get_require_version(name):
     require %= (name, major_version, minor_version,
         major_version, minor_version + 1)
     return require
+
 
 config = ConfigParser()
 config.read_file(open(os.path.join(os.path.dirname(__file__), 'tryton.cfg')))
@@ -40,18 +37,20 @@ version = info.get('version', '0.0.1')
 major_version, minor_version, _ = version.split('.', 2)
 major_version = int(major_version)
 minor_version = int(minor_version)
-name = 'nan_shine'
-download_url = 'https://bitbucket.org/nantic/trytond-shine'
+name = 'trytond_shine'
 
-requires = []
+download_url = 'https://github.com/solutema/trytond-shine' % (
+    major_version, minor_version)
+
+requires = ['formula']
+
 for dep in info.get('depends', []):
     if not re.match(r'(ir|res)(\W|$)', dep):
-        prefix = MODULE2PREFIX.get(dep, 'trytond')
-        requires.append(get_require_version('%s_%s' % (prefix, dep)))
+        requires.append(get_require_version('trytond_%s' % dep))
 requires.append(get_require_version('trytond'))
 
-tests_require = []
-dependency_links = []
+tests_require = [get_require_version('proteus')]
+
 if minor_version % 2:
     # Add development index for testing with proteus
     dependency_links.append('https://trydevpi.tryton.org/')
@@ -64,7 +63,7 @@ setup(name=name,
     author_email='info@nan-tic.com',
     url='trytond-shine',
     download_url=download_url,
-    keywords='',
+    keywords='tryton spreedsheet',
     package_dir={'trytond.modules.shine': '.'},
     packages=[
         'trytond.modules.shine',
@@ -87,17 +86,18 @@ setup(name=name,
         'Natural Language :: English',
         'Natural Language :: Spanish',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Office/Business',
         ],
     license='GPL-3',
+    python_requires='>=3.6',
     install_requires=requires,
-    dependency_links=dependency_links,
     zip_safe=False,
     entry_points="""
     [trytond.modules]
