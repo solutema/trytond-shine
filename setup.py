@@ -41,7 +41,7 @@ name = 'trytond_shine'
 
 download_url = 'https://github.com/solutema/trytond-shine'
 
-requires = ['formula']
+requires = ['formulas']
 
 for dep in info.get('depends', []):
     if not re.match(r'(ir|res)(\W|$)', dep):
